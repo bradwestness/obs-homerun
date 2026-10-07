@@ -1,9 +1,9 @@
 [package]
 name = "obs-homerun"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 authors = ["Brad Westness"]
-description = "Turn your OBS stream into a virtual HDTV tuner for Smart TVs"
+description = "Turn your OBS Studio stream into a virtual HDTV tuner for Smart TVs"
 
 [dependencies]
 tokio = { version = "1.40", features = ["full"] }

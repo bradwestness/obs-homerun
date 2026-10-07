@@ -1,5 +1,5 @@
 [Unit]
-Description=OBS HomeRun - Virtual HDTV Tuner for OBS
+Description=OBS HomeRun - Virtual HDTV Tuner
 After=network-online.target
 Wants=network-online.target
 

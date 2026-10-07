@@ -14,7 +14,7 @@ FROM alpine:3.21
 
 LABEL maintainer="Brad Westness"
 LABEL org.opencontainers.image.title="OBS HomeRun"
-LABEL org.opencontainers.image.description="Turn your OBS stream into a virtual HDTV tuner for Smart TVs"
+LABEL org.opencontainers.image.description="Turn your OBS Studio stream into a virtual HDTV tuner for Smart TVs"
 LABEL org.opencontainers.image.source="https://github.com/bradwestness/obs-homerun"
 
 # Install runtime dependencies (FFmpeg and curl for HEALTHCHECK)
