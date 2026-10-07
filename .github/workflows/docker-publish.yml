@@ -1,4 +1,4 @@
-name: Build and Publish Container Image
+name: CI & Container Build
 
 on:
   push:
@@ -13,8 +13,110 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  test:
+    name: Unit & Protocol Tests
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Install FFmpeg for stream pipeline test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Vet codebase
+        run: go vet ./...
+
+      - name: Run Go test suite (with race detector)
+        run: go test -v -race ./...
+
+  container-validation:
+    name: Container & Stream Pipeline Validation
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install FFmpeg for synthetic stream generation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Build local container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Containerfile
+          load: true
+          tags: obs-homerun:test
+          cache-from: type=gha
+
+      - name: Start obs-homerun test container
+        run: |
+          docker run -d --name homerun-test \
+            -p 5004:5004 \
+            -p 1935:1935 \
+            -p 8554:8554 \
+            obs-homerun:test
+
+      - name: Verify health and discovery endpoints
+        run: |
+          echo "Waiting for obs-homerun to initialize..."
+          for i in {1..20}; do
+            if curl -s -f http://127.0.0.1:5004/discover.json > /dev/null; then
+              echo "Server is responding!"
+              break
+            fi
+            sleep 1
+          done
+
+          echo "Validating /discover.json..."
+          curl -s -f http://127.0.0.1:5004/discover.json | grep "HDTV-1.0"
+
+          echo "Validating /lineup.json..."
+          curl -s -f http://127.0.0.1:5004/lineup.json | grep "1.1"
+
+          echo "Validating /dms/device.xml..."
+          curl -s -f http://127.0.0.1:5004/dms/device.xml | grep "OBS HomeRun"
+
+          echo "Validating ConnectionManager SOAP..."
+          curl -s -f -X POST http://127.0.0.1:5004/dms/ConnectionManager \
+            -d '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:GetProtocolInfo xmlns:u="urn:schemas-upnp-org:service:ConnectionManager:1"/></s:Body></s:Envelope>' \
+            | grep "GetProtocolInfoResponse"
+
+      - name: Validate live RTMP -> MediaMTX -> HTTP MPEG-TS pipeline
+        run: |
+          echo "Broadcasting synthetic RTMP stream into MediaMTX..."
+          ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i sine=frequency=1000:sample_rate=48000 \
+            -c:v libx264 -preset ultrafast -tune zerolatency -c:a aac -t 8 -f flv rtmp://127.0.0.1:1935/live/stream &
+          STREAM_PID=$!
+          sleep 2
+
+          echo "Probing MPEG-TS stream from HTTP tuner endpoint..."
+          ffmpeg -t 3 -i http://127.0.0.1:5004/auto/v1.1 -f null -
+
+          wait $STREAM_PID
+          echo "End-to-end stream pipeline validated successfully!"
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker logs homerun-test
+
+  build-and-push:
+    name: Build & Push Multi-Arch Container
+    runs-on: ubuntu-latest
+    needs: [test, container-validation]
     permissions:
       contents: read
       packages: write
@@ -48,7 +150,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
 
-      - name: Build and push Docker image
+      - name: Build and push multi-arch Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
