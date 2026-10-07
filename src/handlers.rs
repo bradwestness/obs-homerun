@@ -106,10 +106,7 @@ pub async fn handle_device_xml(State(config): State<Arc<Config>>) -> impl IntoRe
         .unwrap()
 }
 
-pub async fn handle_connection_manager(
-    method: Method,
-    body: Bytes,
-) -> impl IntoResponse {
+pub async fn handle_connection_manager(method: Method, body: Bytes) -> impl IntoResponse {
     if method == Method::POST {
         let body_str = String::from_utf8_lossy(&body);
         let resp = if body_str.contains("GetProtocolInfo") {
@@ -177,11 +174,12 @@ pub async fn handle_content_directory(
                 StatusCode::OK,
             )
         } else if body_str.contains("Browse") {
-            let (result, count) = if body_str.contains("ObjectID>0<") || body_str.contains("ObjectID&gt;0&lt;") {
-                (config.didl_containers(), 2)
-            } else {
-                (config.didl_item(), 1)
-            };
+            let (result, count) =
+                if body_str.contains("ObjectID>0<") || body_str.contains("ObjectID&gt;0&lt;") {
+                    (config.didl_containers(), 2)
+                } else {
+                    (config.didl_item(), 1)
+                };
 
             (
                 format!(
@@ -195,9 +193,7 @@ pub async fn handle_content_directory(
 <UpdateID>1</UpdateID>
 </u:BrowseResponse>
 </s:Body>
-</s:Envelope>"#,
-                    result = result,
-                    count = count
+</s:Envelope>"#
                 ),
                 StatusCode::OK,
             )

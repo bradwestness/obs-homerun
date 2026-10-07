@@ -92,14 +92,12 @@ pub async fn run_ssdp(config: Arc<Config>) {
 
     let mut buf = vec![0u8; 2048];
     loop {
-        let (n, client_addr) = match listener.recv_from(&mut buf).await {
-            Ok(res) => res,
-            Err(_) => break,
+        let Ok((n, client_addr)) = listener.recv_from(&mut buf).await else {
+            break;
         };
 
-        let text = match std::str::from_utf8(&buf[..n]) {
-            Ok(s) => s,
-            Err(_) => continue,
+        let Ok(text) = std::str::from_utf8(&buf[..n]) else {
+            continue;
         };
 
         if !text.contains("M-SEARCH") {
@@ -123,36 +121,29 @@ pub async fn run_ssdp(config: Arc<Config>) {
             _ => continue,
         };
 
-        let mut matched = Vec::new();
-        if st == "ssdp:all" {
-            matched = targets.clone();
+        let matched: Vec<String> = if st == "ssdp:all" {
+            targets.clone()
         } else {
-            for t in &targets {
-                if st == t {
-                    matched.push(t.clone());
-                }
-            }
-        }
+            targets.iter().filter(|t| *t == st).cloned().collect()
+        };
 
         for m in matched {
             let usn = if m == format!("uuid:{}", config.device_uuid) {
                 format!("uuid:{}", config.device_uuid)
             } else {
-                format!("uuid:{}::{}", config.device_uuid, m)
+                format!("uuid:{}::{m}", config.device_uuid)
             };
 
+            let host = &config.host_ip;
+            let port = config.http_port;
             let resp = format!(
                 "HTTP/1.1 200 OK\r\n\
                  CACHE-CONTROL: max-age=1800\r\n\
                  EXT:\r\n\
                  LOCATION: http://{host}:{port}/dms/device.xml\r\n\
                  SERVER: Linux/UPnP/1.0 DLNADOC/1.50 VirtualHDTV/1.0\r\n\
-                 ST: {st}\r\n\
-                 USN: {usn}\r\n\r\n",
-                host = config.host_ip,
-                port = config.http_port,
-                st = m,
-                usn = usn
+                 ST: {m}\r\n\
+                 USN: {usn}\r\n\r\n"
             );
             let _ = listener.send_to(resp.as_bytes(), client_addr).await;
         }

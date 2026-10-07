@@ -3,7 +3,11 @@ use obs_homerun::{config::Config, handlers, ssdp, stream};
 use std::sync::Arc;
 use tracing::{info, warn};
 
-fn find_file_candidates(env_var: &str, relative_names: &[&str], system_paths: &[&str]) -> Option<std::path::PathBuf> {
+fn find_file_candidates(
+    env_var: &str,
+    relative_names: &[&str],
+    system_paths: &[&str],
+) -> Option<std::path::PathBuf> {
     if let Ok(val) = std::env::var(env_var) {
         let p = std::path::PathBuf::from(val);
         if p.exists() {
@@ -129,14 +133,12 @@ fn spawn_mediamtx_supervisor(
                             match res {
                                 Ok(status) => {
                                     warn!(
-                                        "[MediaMTX] Process terminated unexpectedly with status: {}. Restarting in 1s...",
-                                        status
+                                        "[MediaMTX] Process terminated unexpectedly with status: {status}. Restarting in 1s..."
                                     );
                                 }
                                 Err(e) => {
                                     warn!(
-                                        "[MediaMTX] Error waiting on process: {}. Restarting in 1s...",
-                                        e
+                                        "[MediaMTX] Error waiting on process: {e}. Restarting in 1s..."
                                     );
                                 }
                             }
@@ -153,14 +155,14 @@ fn spawn_mediamtx_supervisor(
                     if *shutdown_rx.borrow() {
                         break;
                     }
-                    warn!("[MediaMTX] Failed to spawn MediaMTX: {}. Retrying in 2s...", e);
+                    warn!("[MediaMTX] Failed to spawn MediaMTX: {e}. Retrying in 2s...");
                     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                 }
             }
 
             // Brief backoff before restart unless shutting down
             tokio::select! {
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {}
+                () = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {}
                 _ = shutdown_rx.changed() => {
                     if *shutdown_rx.borrow() {
                         break;
@@ -183,26 +185,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = Arc::new(Config::from_env());
 
+    let friendly_name = &config.friendly_name;
+    let channel_number = &config.channel_number;
+    let host_ip = &config.host_ip;
+    let http_port = config.http_port;
+    let rtsp_source = &config.rtsp_source;
+    let buffer_sec = config.buffer_sec;
+    let half_buffer = &config.half_buffer;
+    let audio_codec = &config.audio_codec;
+    let audio_bitrate = &config.audio_bitrate;
+
     info!("==================================================");
     info!("       Starting OBS HomeRun (Rust Engine)         ");
     info!("==================================================");
-    info!("Friendly Name:   {}", config.friendly_name);
-    info!("Channel Number:  {}", config.channel_number);
-    info!("Host Address:    {}:{}", config.host_ip, config.http_port);
-    info!("RTSP Source:     {}", config.rtsp_source);
-    info!("Buffer Safety:   {:.1}s (muxdelay: {}s)", config.buffer_sec, config.half_buffer);
-    info!("Audio Codec:     {} ({})", config.audio_codec, config.audio_bitrate);
+    info!("Friendly Name:   {friendly_name}");
+    info!("Channel Number:  {channel_number}");
+    info!("Host Address:    {host_ip}:{http_port}");
+    info!("RTSP Source:     {rtsp_source}");
+    info!("Buffer Safety:   {buffer_sec:.1}s (muxdelay: {half_buffer}s)");
+    info!("Audio Codec:     {audio_codec} ({audio_bitrate})");
     info!("==================================================");
 
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
 
     let (bin_path, config_path) = discover_mediamtx();
-    let _mtx_handle = if let Some(bin) = bin_path {
-        Some(spawn_mediamtx_supervisor(bin, config_path, shutdown_rx))
-    } else {
-        info!("[Init] No local MediaMTX binary found. Expecting external MediaMTX service.");
-        None
-    };
+    let _mtx_handle = bin_path.map_or_else(
+        || {
+            info!("[Init] No local MediaMTX binary found. Expecting external MediaMTX service.");
+            None
+        },
+        |bin| Some(spawn_mediamtx_supervisor(bin, config_path, shutdown_rx)),
+    );
 
     // Start SSDP background task
     tokio::spawn(ssdp::run_ssdp(Arc::clone(&config)));
@@ -243,7 +256,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], config.http_port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    info!("HTTP server listening on http://0.0.0.0:{}", config.http_port);
+    info!("HTTP server listening on http://0.0.0.0:{http_port}");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
@@ -273,8 +286,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     info!("Shutdown signal received, shutting down gracefully...");

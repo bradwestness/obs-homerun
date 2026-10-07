@@ -15,6 +15,7 @@ pub struct Config {
     pub device_uuid: String,
 }
 
+#[must_use]
 pub fn get_default_host_ip() -> String {
     if let Ok(env) = std::env::var("HOST_IP") {
         let trimmed = env.trim();
@@ -34,9 +35,10 @@ pub fn get_default_host_ip() -> String {
     "127.0.0.1".to_string()
 }
 
+#[must_use]
 pub fn generate_uuid(name: &str) -> String {
     let mut hasher = Md5::new();
-    hasher.update(format!("obs-homerun.{}", name).as_bytes());
+    hasher.update(format!("obs-homerun.{name}").as_bytes());
     let mut h = hasher.finalize();
 
     // RFC 4122 version 3 and variant
@@ -50,15 +52,18 @@ pub fn generate_uuid(name: &str) -> String {
 }
 
 impl Config {
+    #[must_use]
     pub fn from_env() -> Self {
-        let friendly_name = std::env::var("FRIENDLY_NAME").unwrap_or_else(|_| "OBS HomeRun".to_string());
+        let friendly_name =
+            std::env::var("FRIENDLY_NAME").unwrap_or_else(|_| "OBS HomeRun".to_string());
         let channel_number = std::env::var("CHANNEL_NUMBER").unwrap_or_else(|_| "1.1".to_string());
         let http_port = std::env::var("HTTP_PORT")
             .ok()
             .and_then(|p| p.parse::<u16>().ok())
             .unwrap_or(5004);
         let host_ip = get_default_host_ip();
-        let rtsp_source = std::env::var("RTSP_SOURCE").unwrap_or_else(|_| "rtsp://127.0.0.1:8554/live/stream".to_string());
+        let rtsp_source = std::env::var("RTSP_SOURCE")
+            .unwrap_or_else(|_| "rtsp://127.0.0.1:8554/live/stream".to_string());
 
         let buffer_sec = std::env::var("BUFFER_SECONDS")
             .ok()
@@ -68,12 +73,13 @@ impl Config {
         if half < 0.5 {
             half = 0.5;
         }
-        let half_buffer = format!("{:.1}", half);
+        let half_buffer = format!("{half:.1}");
 
         let audio_codec = std::env::var("AUDIO_CODEC").unwrap_or_else(|_| "ac3".to_string());
         let audio_bitrate = std::env::var("AUDIO_BITRATE").unwrap_or_else(|_| "384k".to_string());
 
-        let device_uuid = std::env::var("DEVICE_UUID").unwrap_or_else(|_| generate_uuid(&friendly_name));
+        let device_uuid =
+            std::env::var("DEVICE_UUID").unwrap_or_else(|_| generate_uuid(&friendly_name));
 
         Self {
             friendly_name,
@@ -89,6 +95,7 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn device_xml(&self) -> String {
         format!(
             r#"<?xml version="1.0" encoding="utf-8"?>
@@ -135,6 +142,7 @@ impl Config {
         )
     }
 
+    #[must_use]
     pub fn discover_json(&self) -> String {
         serde_json::json!({
             "FriendlyName": self.friendly_name,
@@ -150,6 +158,7 @@ impl Config {
         .to_string()
     }
 
+    #[must_use]
     pub fn lineup_json(&self) -> String {
         serde_json::json!([
             {
@@ -161,6 +170,7 @@ impl Config {
         .to_string()
     }
 
+    #[must_use]
     pub fn didl_item(&self) -> String {
         format!(
             "&lt;DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\"&gt;&lt;item id=\"v1\" parentID=\"0\" restricted=\"1\"&gt;&lt;dc:title&gt;{name}&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.videoItem.videoBroadcast&lt;/upnp:class&gt;&lt;upnp:channelNr&gt;{ch}&lt;/upnp:channelNr&gt;&lt;upnp:channelName&gt;{name}&lt;/upnp:channelName&gt;&lt;res protocolInfo=\"http-get:*:video/mpeg:DLNA.ORG_PN=AVC_TS_HD_60_AC3_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01700000000000000000000000000000\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;res protocolInfo=\"http-get:*:video/mp2t:*\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;res protocolInfo=\"http-get:*:video/vnd.dlna.mpeg-tts:DLNA.ORG_PN=AVC_TS_NA_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01700000000000000000000000000000\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;",
@@ -171,6 +181,7 @@ impl Config {
         )
     }
 
+    #[must_use]
     pub fn didl_containers(&self) -> String {
         format!(
             "&lt;DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\"&gt;&lt;container id=\"Channels\" parentID=\"0\" restricted=\"1\"&gt;&lt;dc:title&gt;Channels&lt;/dc:title&gt;&lt;upnp:class&gt;object.container&lt;/upnp:class&gt;&lt;dlna:containerType&gt;Tuner_1_0&lt;/dlna:containerType&gt;&lt;/container&gt;&lt;item id=\"v1\" parentID=\"0\" restricted=\"1\"&gt;&lt;dc:title&gt;{name}&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.videoItem.videoBroadcast&lt;/upnp:class&gt;&lt;upnp:channelNr&gt;{ch}&lt;/upnp:channelNr&gt;&lt;upnp:channelName&gt;{name}&lt;/upnp:channelName&gt;&lt;res protocolInfo=\"http-get:*:video/mpeg:DLNA.ORG_PN=AVC_TS_HD_60_AC3_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01700000000000000000000000000000\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;res protocolInfo=\"http-get:*:video/mp2t:*\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;res protocolInfo=\"http-get:*:video/vnd.dlna.mpeg-tts:DLNA.ORG_PN=AVC_TS_NA_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01700000000000000000000000000000\"&gt;http://{host}:{port}/auto/v{ch}&lt;/res&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;",

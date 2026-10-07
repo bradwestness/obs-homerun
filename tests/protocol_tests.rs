@@ -69,7 +69,10 @@ fn test_device_xml() {
     let xml = config.device_xml();
 
     assert!(xml.contains("<friendlyName>"));
-    assert!(xml.contains(&format!("<friendlyName>{}</friendlyName>", config.friendly_name)));
+    assert!(xml.contains(&format!(
+        "<friendlyName>{}</friendlyName>",
+        config.friendly_name
+    )));
     assert!(xml.contains(&format!("<UDN>uuid:{}</UDN>", config.device_uuid)));
     assert!(xml.contains("<modelNumber>HDTV-1.0</modelNumber>"));
 }
@@ -124,13 +127,23 @@ async fn test_content_directory_soap() {
 #[tokio::test]
 async fn test_stream_head() {
     let config = Arc::new(Config::from_env());
-    let resp = handle_stream(State(config), Method::HEAD).await.expect("HEAD response");
+    let resp = handle_stream(State(config), Method::HEAD)
+        .await
+        .expect("HEAD response");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(resp.headers().get("transferMode.dlna.org").unwrap(), "Streaming");
+    assert_eq!(
+        resp.headers().get("transferMode.dlna.org").unwrap(),
+        "Streaming"
+    );
     assert_eq!(resp.headers().get("content-type").unwrap(), "video/mpeg");
 
-    let cf = resp.headers().get("contentFeatures.dlna.org").unwrap().to_str().unwrap();
+    let cf = resp
+        .headers()
+        .get("contentFeatures.dlna.org")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(cf.contains("DLNA.ORG_OP=00"));
     assert!(cf.contains("AVC_TS_HD_60_AC3_ISO"));
 }

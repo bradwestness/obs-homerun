@@ -38,13 +38,22 @@ Before committing any changes to `src/` or `tests/`, always run the test suite a
 ### In Container (Standard Environment)
 If local Rust toolchains are not in host `PATH`, use the container runtime:
 
+* **Code Formatting**:
+  ```bash
+  # Check formatting
+  podman run --rm -v "$(pwd)":/src:Z -w /src rust:alpine sh -c "rustup component add rustfmt 2>/dev/null; cargo fmt --check"
+
+  # Autoformat files
+  podman run --rm -v "$(pwd)":/src:Z -w /src rust:alpine sh -c "rustup component add rustfmt 2>/dev/null; cargo fmt"
+  ```
+* **Pedantic Clippy Linter Check**:
+  ```bash
+  podman run --rm -v "$(pwd)":/src:Z -w /src rust:alpine sh -c "rustup component add clippy 2>/dev/null; cargo clippy --all-targets --all-features -- -D warnings"
+  ```
+  *(Note: Strict `pedantic` and `nursery` lints plus `forbid(unsafe_code)` are configured in `Cargo.toml` under `[lints]`, so `-D warnings` automatically enforces them).*
 * **Unit & Protocol Tests**:
   ```bash
   podman run --rm -v "$(pwd)":/src:Z -w /src rust:alpine cargo test
-  ```
-* **Clippy Linter Check**:
-  ```bash
-  podman run --rm -v "$(pwd)":/src:Z -w /src rust:alpine cargo clippy --all-targets --all-features -- -D warnings
   ```
 
 ---

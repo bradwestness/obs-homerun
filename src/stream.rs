@@ -10,15 +10,16 @@ use tokio_util::io::ReaderStream;
 use tracing::{debug, error, info, warn};
 
 fn build_ffmpeg_cmd(config: &Config) -> tokio::process::Command {
-    let mut audio_args = vec!["-c:a".to_string(), "copy".to_string()];
-    if config.audio_codec != "copy" {
-        audio_args = vec![
+    let audio_args = if config.audio_codec == "copy" {
+        vec!["-c:a".to_string(), "copy".to_string()]
+    } else {
+        vec![
             "-c:a".to_string(),
             config.audio_codec.clone(),
             "-b:a".to_string(),
             config.audio_bitrate.clone(),
-        ];
-    }
+        ]
+    };
 
     let mut ffmpeg_args = vec![
         "-hide_banner".to_string(),
@@ -66,7 +67,7 @@ async fn spawn_ffmpeg(
     config: &Config,
 ) -> Result<(tokio::process::Child, tokio::process::ChildStdout, Vec<u8>), String> {
     let mut cmd = build_ffmpeg_cmd(config);
-    let mut child = cmd.spawn().map_err(|e| format!("spawn error: {}", e))?;
+    let mut child = cmd.spawn().map_err(|e| format!("spawn error: {e}"))?;
     let mut stdout = child
         .stdout
         .take()
@@ -76,7 +77,7 @@ async fn spawn_ffmpeg(
     let n = stdout
         .read(&mut initial_buf)
         .await
-        .map_err(|e| format!("read error: {}", e))?;
+        .map_err(|e| format!("read error: {e}"))?;
 
     if n == 0 {
         return Err("EOF on initial read".to_string());
@@ -128,27 +129,25 @@ pub async fn handle_stream(
             Err(e) => {
                 if initial_attempt >= max_initial_retries {
                     error!(
-                        "[Stream] Failed to connect to stream after {} attempts: {}",
-                        max_initial_retries, e
+                        "[Stream] Failed to connect to stream after {max_initial_retries} attempts: {e}"
                     );
                     return Err(StatusCode::BAD_GATEWAY);
                 }
                 warn!(
-                    "[Stream] Connection attempt {}/{} failed ({}), retrying in 500ms...",
-                    initial_attempt, max_initial_retries, e
+                    "[Stream] Connection attempt {initial_attempt}/{max_initial_retries} failed ({e}), retrying in 500ms..."
                 );
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             }
         }
     };
 
-    let (duplex_read, mut duplex_write) = tokio::io::duplex(131072);
+    let (duplex_read, mut duplex_write) = tokio::io::duplex(131_072);
     let stream_config = Arc::clone(&config);
 
     tokio::spawn(async move {
         // Send initial buffered chunk
         if let Err(e) = duplex_write.write_all(&initial_buf).await {
-            debug!("[Stream] Client disconnected before initial buffer sent: {}", e);
+            debug!("[Stream] Client disconnected before initial buffer sent: {e}");
             let mut dead = first_child;
             let _ = dead.kill().await;
             return;
@@ -168,7 +167,7 @@ pub async fn handle_stream(
                 }
                 Err(e) => {
                     // Client disconnected (e.g. BrokenPipe)
-                    info!("[Stream] Client connection closed: {}", e);
+                    info!("[Stream] Client connection closed: {e}");
                     break;
                 }
             }
@@ -176,29 +175,25 @@ pub async fn handle_stream(
             // Attempt to reconnect if client is still listening
             info!("[Stream] Attempting to reconnect to broadcaster (up to 10s grace period)...");
             let mut reconnected = false;
-            let reconnect_deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(10);
+            let reconnect_deadline =
+                tokio::time::Instant::now() + tokio::time::Duration::from_secs(10);
 
             while tokio::time::Instant::now() < reconnect_deadline {
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
-                match spawn_ffmpeg(&stream_config).await {
-                    Ok((new_child, new_stdout, new_buf)) => {
-                        // Test writing to client to verify it hasn't disconnected
-                        if let Err(e) = duplex_write.write_all(&new_buf).await {
-                            info!("[Stream] Client disconnected during reconnect: {}", e);
-                            let mut dead = new_child;
-                            let _ = dead.kill().await;
-                            return;
-                        }
-                        info!("[Stream] Reconnected successfully to stream! Resuming playback.");
-                        current_child = new_child;
-                        current_stdout = new_stdout;
-                        reconnected = true;
-                        break;
+                if let Ok((new_child, new_stdout, new_buf)) = spawn_ffmpeg(&stream_config).await {
+                    // Test writing to client to verify it hasn't disconnected
+                    if let Err(e) = duplex_write.write_all(&new_buf).await {
+                        info!("[Stream] Client disconnected during reconnect: {e}");
+                        let mut dead = new_child;
+                        let _ = dead.kill().await;
+                        return;
                     }
-                    Err(_) => {
-                        // Broadcaster not ready yet, keep waiting within grace period
-                    }
+                    info!("[Stream] Reconnected successfully to stream! Resuming playback.");
+                    current_child = new_child;
+                    current_stdout = new_stdout;
+                    reconnected = true;
+                    break;
                 }
             }
 
