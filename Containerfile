@@ -1,13 +1,13 @@
-# Stage 1: Build the Go binary
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+# Stage 1: Build the Rust binary
+FROM rust:alpine AS builder
 
 WORKDIR /src
-COPY go.mod ./
-COPY main.go ./
+COPY Cargo.toml Cargo.lock* ./
+COPY src/ ./src/
 
-ARG TARGETOS TARGETARCH
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
-    go build -ldflags="-s -w" -o /app/obs-homerun .
+RUN mkdir -p /app && \
+    cargo build --release && \
+    cp target/release/obs-homerun /app/obs-homerun
 
 # Stage 2: Runtime image
 FROM alpine:3.21
@@ -38,7 +38,7 @@ RUN case "${TARGETARCH}" in \
       | tar -xz -C /app mediamtx && \
     chmod +x /app/mediamtx
 
-# Copy compiled Go binary and configuration
+# Copy compiled Rust binary and configuration
 COPY --from=builder /app/obs-homerun /app/obs-homerun
 COPY mediamtx.yml /app/mediamtx.yml
 

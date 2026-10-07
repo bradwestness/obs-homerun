@@ -33,7 +33,7 @@ flowchart LR
 3. **Mid-Stream Decoder Lock:** Injects Sequence Parameter Set (SPS) and Picture Parameter Set (PPS) headers inline into every keyframe (`dump_extra`) so the TV's hardware decoder locks on immediately with zero dropped frames.
 4. **Universal Broadcast Audio:** Converts audio to ATSC-standard Dolby Digital AC-3 on the fly.
 5. **Jitter-Free Playback:** Maintains an internal ~3-second clock cushion (`muxdelay`/`muxpreload`) and expanded TCP buffer so local Wi-Fi micro-stutters never trigger a spinning wheel.
-6. **Zero GPU Overhead:** Video is remuxed using stream-copy (0% GPU encode compute taken away from your games or local LLMs).
+6. **Zero GPU Overhead:** Video is remuxed using stream-copy (0% GPU encode compute taken away from your games, creative apps, or productivity work).
 
 ---
 
@@ -184,7 +184,7 @@ OBS HomeRun is designed to run 24/7 as a background service without wasting syst
   - FFmpeg is **still not running**—zero transcoding compute is consumed until a TV actively requests the feed.
 - **TV Actively Watching:**
   - FFmpeg is spawned on-demand as a child process.
-  - Video is remuxed using **stream-copy** (`-c:v copy`), meaning zero GPU encoding power is stolen from your games or local LLMs.
+  - Video is remuxed using **stream-copy** (`-c:v copy`), meaning zero GPU encoding power is stolen from your games, creative apps, or productivity work.
 - **TV Turns Off / Changes Inputs:**
   - The HTTP connection terminates and FFmpeg is immediately killed (`SIGKILL`), dropping resource usage back to zero.
 
