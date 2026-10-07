@@ -1,6 +1,6 @@
 [package]
 name = "obs-homerun"
-version = "0.1.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Brad Westness"]
 description = "Turn your OBS stream into a virtual HDTV tuner for Smart TVs"

@@ -29,6 +29,17 @@ fn find_file_candidates(env_var: &str, relative_names: &[&str], system_paths: &[
         }
     }
 
+    if let Some(path_var) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&path_var) {
+            for name in relative_names {
+                let p = dir.join(name);
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+
     for p_str in system_paths {
         let p = std::path::PathBuf::from(p_str);
         if p.is_file() {
@@ -39,7 +50,7 @@ fn find_file_candidates(env_var: &str, relative_names: &[&str], system_paths: &[
     None
 }
 
-fn start_mediamtx() -> Option<tokio::process::Child> {
+fn discover_mediamtx() -> (Option<std::path::PathBuf>, Option<std::path::PathBuf>) {
     let exe_names: Vec<&str> = if cfg!(windows) {
         vec!["mediamtx.exe", "mediamtx"]
     } else {
@@ -57,7 +68,7 @@ fn start_mediamtx() -> Option<tokio::process::Child> {
         ],
     );
 
-    let config_path = find_file_candidates(
+    let mut config_path = find_file_candidates(
         "MEDIAMTX_CONFIG",
         &["mediamtx.yml"],
         &[
@@ -67,36 +78,98 @@ fn start_mediamtx() -> Option<tokio::process::Child> {
         ],
     );
 
-    if let Some(bin) = bin_path {
-        let mut cmd = tokio::process::Command::new(&bin);
-        if let Some(cfg) = config_path {
-            info!(
-                "[Init] Starting embedded MediaMTX engine ({}) with config ({})...",
-                bin.display(),
-                cfg.display()
-            );
-            cmd.arg(&cfg);
-        } else {
-            info!(
-                "[Init] Starting embedded MediaMTX engine ({}) with default configuration...",
-                bin.display()
-            );
-        }
-
-        cmd.stdout(std::process::Stdio::inherit())
-            .stderr(std::process::Stdio::inherit())
-            .kill_on_drop(true);
-
-        match cmd.spawn() {
-            Ok(child) => return Some(child),
-            Err(e) => {
-                warn!("[Init] Warning: Failed to start MediaMTX: {}", e);
+    // If no config found in standard paths, check co-located with binary
+    if config_path.is_none() {
+        if let Some(ref bin) = bin_path {
+            if let Some(parent) = bin.parent() {
+                let candidate = parent.join("mediamtx.yml");
+                if candidate.is_file() {
+                    config_path = Some(candidate);
+                }
             }
         }
-    } else {
-        info!("[Init] No local MediaMTX binary found. Expecting external MediaMTX service.");
     }
-    None
+
+    (bin_path, config_path)
+}
+
+fn spawn_mediamtx_supervisor(
+    bin: std::path::PathBuf,
+    config: Option<std::path::PathBuf>,
+    mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        while !*shutdown_rx.borrow() {
+            let mut cmd = tokio::process::Command::new(&bin);
+            if let Some(ref cfg) = config {
+                info!(
+                    "[MediaMTX] Starting engine ({}) with config ({})...",
+                    bin.display(),
+                    cfg.display()
+                );
+                cmd.arg(cfg);
+            } else {
+                info!(
+                    "[MediaMTX] Starting engine ({}) with default configuration...",
+                    bin.display()
+                );
+            }
+
+            cmd.stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .kill_on_drop(true);
+
+            match cmd.spawn() {
+                Ok(mut child) => {
+                    tokio::select! {
+                        res = child.wait() => {
+                            if *shutdown_rx.borrow() {
+                                break;
+                            }
+                            match res {
+                                Ok(status) => {
+                                    warn!(
+                                        "[MediaMTX] Process terminated unexpectedly with status: {}. Restarting in 1s...",
+                                        status
+                                    );
+                                }
+                                Err(e) => {
+                                    warn!(
+                                        "[MediaMTX] Error waiting on process: {}. Restarting in 1s...",
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                        _ = shutdown_rx.changed() => {
+                            if *shutdown_rx.borrow() {
+                                let _ = child.kill().await;
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    if *shutdown_rx.borrow() {
+                        break;
+                    }
+                    warn!("[MediaMTX] Failed to spawn MediaMTX: {}. Retrying in 2s...", e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                }
+            }
+
+            // Brief backoff before restart unless shutting down
+            tokio::select! {
+                _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {}
+                _ = shutdown_rx.changed() => {
+                    if *shutdown_rx.borrow() {
+                        break;
+                    }
+                }
+            }
+        }
+        info!("[MediaMTX] Engine stopped.");
+    })
 }
 
 #[tokio::main]
@@ -121,7 +194,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Audio Codec:     {} ({})", config.audio_codec, config.audio_bitrate);
     info!("==================================================");
 
-    let _mtx_child = start_mediamtx();
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+
+    let (bin_path, config_path) = discover_mediamtx();
+    let _mtx_handle = if let Some(bin) = bin_path {
+        Some(spawn_mediamtx_supervisor(bin, config_path, shutdown_rx))
+    } else {
+        info!("[Init] No local MediaMTX binary found. Expecting external MediaMTX service.");
+        None
+    };
 
     // Start SSDP background task
     tokio::spawn(ssdp::run_ssdp(Arc::clone(&config)));
@@ -168,6 +249,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
+    let _ = shutdown_tx.send(true);
     info!("OBS HomeRun exited.");
     Ok(())
 }
