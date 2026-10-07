@@ -1,0 +1,18 @@
+[Unit]
+Description=OBS HomeRun - Virtual HDHomeRun TV Tuner for OBS
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/bradwestness/obs-homerun:latest
+ContainerName=obs-homerun
+# Host networking is required for SSDP (239.255.255.250:1900) UPnP discovery
+Network=host
+Environment=FRIENDLY_NAME=OBS HomeRun
+Environment=CHANNEL_NUMBER=1.1
+Environment=BUFFER_SECONDS=3.0
+# Environment=HOST_IP=192.168.1.100  # Optional: automatically detected if omitted
+AutoUpdate=registry
+
+[Install]
+WantedBy=default.target

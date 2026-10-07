@@ -1,0 +1,24 @@
+# MediaMTX configuration for OBS HomeRun
+# Minimal footprint: enables RTMP ingest and internal RTSP relay only.
+
+logLevel: warn
+logDestinations: [stdout]
+
+# RTMP ingest for OBS
+rtmp: yes
+rtmpAddress: :1935
+rtmpEncryption: "no"
+
+# RTSP relay for internal FFmpeg remuxer
+rtsp: yes
+rtspAddress: 127.0.0.1:8554
+protocols: [tcp]
+
+# Disable unused protocols to keep footprint minimal (<15MB RAM)
+hls: no
+webrtc: no
+srt: no
+
+# Allow any stream path (e.g. /live, /live/stream)
+paths:
+  all_others:

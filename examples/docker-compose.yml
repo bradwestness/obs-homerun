@@ -1,0 +1,11 @@
+services:
+  obs-homerun:
+    image: ghcr.io/bradwestness/obs-homerun:latest
+    container_name: obs-homerun
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - FRIENDLY_NAME=OBS HomeRun
+      - CHANNEL_NUMBER=1.1
+      - BUFFER_SECONDS=3.0
+      # - HOST_IP=192.168.1.100  # Optional: auto-detected if omitted
