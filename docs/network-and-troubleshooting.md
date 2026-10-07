@@ -78,7 +78,7 @@ Smart TV discovery issues are almost always caused by home router multicast supp
 4. **Subnet Matching:**
    - Your PC and Smart TV must be on the same local subnet (e.g. `192.168.1.xxx / 24`). If your PC is on Ethernet and your TV is on Wi-Fi, ensure your router does not isolate wired and wireless traffic into separate VLANs.
 
-> 💡 **Wired Ethernet Advantage (vs. Miracast):** Unlike Miracast or Windows Wireless Display (which require peer-to-peer Wi-Fi proximity and fail through interior walls), OBS HomeRun routes cleanly across your standard home network switch. Having your PC hardwired to Ethernet in an office and your TV hardwired in the living room provides a rock-solid, zero-packet-loss broadcast with 0 RF interference.
+> 💡 **Wired Ethernet Advantage (vs. Wireless Casting):** Unlike wireless casting protocols (such as Miracast or AirPlay) that require peer-to-peer wireless proximity and suffer from RF interference, OBS HomeRun routes cleanly across your local network infrastructure. Streaming across wired Ethernet switches delivers a rock-solid, zero-packet-loss broadcast with crisp text and zero frame drops.
 
 ---
 
