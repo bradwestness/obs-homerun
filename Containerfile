@@ -2,7 +2,7 @@ FROM alpine:3.21
 
 LABEL maintainer="Brad Westness"
 LABEL org.opencontainers.image.title="OBS HomeRun"
-LABEL org.opencontainers.image.description="Turn your OBS stream into a virtual HDHomeRun TV tuner for Smart TVs"
+LABEL org.opencontainers.image.description="Turn your OBS stream into a virtual HDTV tuner for Smart TVs"
 LABEL org.opencontainers.image.source="https://github.com/bradwestness/obs-homerun"
 
 # Install runtime dependencies (Python 3, FFmpeg)
@@ -35,7 +35,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh /app/broadcaster.py
 
 # 1935: RTMP (OBS stream ingest)
-# 5004: HTTP (HDHomeRun / DLNA stream & metadata)
+# 5004: HTTP (virtual HDTV / DLNA stream & metadata)
 # 1900: UDP (SSDP UPnP multicast discovery)
 EXPOSE 1935/tcp 5004/tcp 1900/udp
 

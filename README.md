@@ -4,7 +4,7 @@
 [![Container Image](https://img.shields.io/badge/Container-ghcr.io-blue?logo=docker)](https://github.com/bradwestness/obs-homerun/pkgs/container/obs-homerun)
 [![Multi-Arch](https://img.shields.io/badge/Platforms-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey)](#)
 
-> **Turn your OBS Studio stream into a virtual HDHomeRun TV tuner for Smart TVs.**  
+> **Turn your OBS Studio stream into a virtual HDTV tuner for Smart TVs.**  
 > Zero TV apps to install. No typing IP addresses in a TV web browser. Works natively on LG webOS, Samsung Tizen, Sony Bravia, and Roku.
 
 ---
@@ -28,7 +28,7 @@ flowchart LR
     TV -->|HTTP GET :5004<br/>MPEG-TS Live Broadcast| BROADCASTER
 ```
 
-1. **Native TV Tuner Emulation:** Announces itself over SSDP (`239.255.255.250:1900`) using the SiliconDust HDHomeRun UPnP/DLNA profile.
+1. **Native TV Tuner Emulation:** Announces itself over SSDP (`239.255.255.250:1900`) using the UPnP/DLNA virtual tuner profile.
 2. **Instant Native Discovery:** Your TV automatically sees your PC in its **Inputs / Home Dashboard / Devices** list as a TV tuner (Channel 1.1).
 3. **Mid-Stream Decoder Lock:** Injects Sequence Parameter Set (SPS) and Picture Parameter Set (PPS) headers inline into every keyframe (`dump_extra`) so the TV's hardware decoder locks on immediately with zero dropped frames.
 4. **Universal Broadcast Audio:** Converts audio to ATSC-standard Dolby Digital AC-3 on the fly.
@@ -47,7 +47,7 @@ Save as `~/.config/containers/systemd/obs-homerun.container`:
 
 ```ini
 [Unit]
-Description=OBS HomeRun - Virtual HDHomeRun TV Tuner
+Description=OBS HomeRun - Virtual HDTV Tuner
 After=network-online.target
 Wants=network-online.target
 
@@ -55,10 +55,11 @@ Wants=network-online.target
 Image=ghcr.io/bradwestness/obs-homerun:latest
 ContainerName=obs-homerun
 Network=host
+Pull=newer
+AutoUpdate=registry
 Environment=FRIENDLY_NAME=PC Desktop Livestream
 Environment=CHANNEL_NUMBER=1.1
 Environment=BUFFER_SECONDS=3.0
-AutoUpdate=registry
 
 [Install]
 WantedBy=default.target
@@ -149,7 +150,7 @@ All settings are optional and have sensible defaults:
 | `BUFFER_SECONDS` | `3.0` | Jitter cushion buffer duration in seconds (eliminates Wi-Fi stutter) |
 | `AUDIO_CODEC` | `ac3` | Audio codec (`ac3` for native ATSC Dolby Digital, or `copy` for passthrough) |
 | `AUDIO_BITRATE` | `384k` | Audio bitrate for AC-3 transcode |
-| `HTTP_PORT` | `5004` | HTTP port for HDHomeRun & DLNA streaming |
+| `HTTP_PORT` | `5004` | HTTP port for DLNA & virtual tuner streaming |
 | `HOST_IP` | *Auto-detected* | Outbound LAN IP (auto-detected from default gateway if omitted) |
 | `RTSP_SOURCE` | `rtsp://127.0.0.1:8554/live/stream` | Internal RTSP feed ingested by MediaMTX |
 

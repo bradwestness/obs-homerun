@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-OBS HomeRun - Virtual HDHomeRun / DLNA Live Stream Broadcaster
-Disguises your OBS desktop stream as a native HDHomeRun TV tuner over UPnP/DLNA and SSDP.
+OBS HomeRun - Virtual HDTV / DLNA Live Stream Broadcaster
+Disguises your OBS desktop stream as a native virtual HDTV tuner over UPnP/DLNA and SSDP.
 """
 
 import sys
@@ -62,12 +62,12 @@ DEVICE_XML = f"""<?xml version="1.0" encoding="utf-8"?>
     <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
     <friendlyName>{FRIENDLY_NAME}</friendlyName>
     <presentationURL>/</presentationURL>
-    <manufacturer>Silicondust</manufacturer>
-    <manufacturerURL>http://www.silicondust.com/</manufacturerURL>
-    <modelDescription>{FRIENDLY_NAME} HDHomeRun Virtual Tuner</modelDescription>
+    <manufacturer>OBS HomeRun</manufacturer>
+    <manufacturerURL>https://github.com/bradwestness/obs-homerun</manufacturerURL>
+    <modelDescription>{FRIENDLY_NAME} Virtual HDTV Tuner</modelDescription>
     <modelName>OBS HomeRun</modelName>
-    <modelNumber>HDHR5-4US</modelNumber>
-    <modelURL>http://www.silicondust.com/</modelURL>
+    <modelNumber>HDTV-1.0</modelNumber>
+    <modelURL>https://github.com/bradwestness/obs-homerun</modelURL>
     <serialNumber>107BDESK</serialNumber>
     <UDN>uuid:{DEVICE_UUID}</UDN>
     <serviceList>
@@ -305,7 +305,7 @@ class BroadcasterHTTPHandler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         if self.path.startswith("/auto/") or self.path.startswith("/live") or self.path.startswith("/stream"):
             self.send_response(200)
-            self.send_header("Server", "HDHomeRun/1.0 UPnP/1.0 DLNADOC/1.50")
+            self.send_header("Server", "Linux/UPnP/1.0 DLNADOC/1.50 VirtualHDTV/1.0")
             self.send_header("Connection", "close")
             self.send_header("Content-Type", "video/mpeg")
             self.send_header("Cache-Control", "no-cache")
@@ -321,8 +321,8 @@ class BroadcasterHTTPHandler(BaseHTTPRequestHandler):
         if self.path == "/discover.json":
             body = (
                 f'{{"FriendlyName":"{FRIENDLY_NAME}",'
-                f'"ModelNumber":"HDHR5-4US",'
-                f'"FirmwareName":"hdhomerun5_atsc",'
+                f'"ModelNumber":"HDTV-1.0",'
+                f'"FirmwareName":"v_atsc_tuner",'
                 f'"FirmwareVersion":"20260101",'
                 f'"DeviceID":"107BDESK",'
                 f'"DeviceAuth":"desktop",'
@@ -378,7 +378,7 @@ class BroadcasterHTTPHandler(BaseHTTPRequestHandler):
             sys.stderr.flush()
 
             self.send_response(200)
-            self.send_header("Server", "HDHomeRun/1.0 UPnP/1.0 DLNADOC/1.50")
+            self.send_header("Server", "Linux/UPnP/1.0 DLNADOC/1.50 VirtualHDTV/1.0")
             self.send_header("Connection", "close")
             self.send_header("Content-Type", "video/mpeg")
             self.send_header("Cache-Control", "no-cache")
@@ -578,7 +578,7 @@ def run_ssdp():
                 f"LOCATION: http://{HOST_IP}:{HTTP_PORT}/dms/device.xml\r\n"
                 f"USN: {usn}\r\n"
                 f"CACHE-CONTROL: max-age=1800\r\n"
-                f"SERVER: Linux/UPnP/1.0 DLNADOC/1.50 HDHomeRun/1.0\r\n\r\n"
+                f"SERVER: Linux/UPnP/1.0 DLNADOC/1.50 VirtualHDTV/1.0\r\n\r\n"
             )
             try:
                 notify_sock.sendto(msg.encode(), (MULTICAST_GROUP, SSDP_PORT))
@@ -626,7 +626,7 @@ def run_ssdp():
                             f"DATE: {email.utils.formatdate(usegmt=True)}\r\n"
                             f"EXT:\r\n"
                             f"LOCATION: http://{HOST_IP}:{HTTP_PORT}/dms/device.xml\r\n"
-                            f"SERVER: Linux/UPnP/1.0 DLNADOC/1.50 HDHomeRun/1.0\r\n"
+                            f"SERVER: Linux/UPnP/1.0 DLNADOC/1.50 VirtualHDTV/1.0\r\n"
                             f"ST: {m}\r\n"
                             f"USN: {usn}\r\n\r\n"
                         )

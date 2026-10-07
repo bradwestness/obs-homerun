@@ -31,8 +31,8 @@ MEDIAMTX_PID=$!
 # Brief pause to let MediaMTX bind ports
 sleep 1
 
-# Start the HDHomeRun / DLNA Broadcaster in foreground
-echo "[Init] Starting DLNA / HDHomeRun broadcaster..."
+# Start the virtual HDTV / DLNA Broadcaster in foreground
+echo "[Init] Starting DLNA / Virtual HDTV broadcaster..."
 python3 -u /app/broadcaster.py &
 BROADCASTER_PID=$!
 
