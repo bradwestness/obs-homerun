@@ -1,10 +1,10 @@
-# 🎥 OBS Studio Configuration Guide
+# OBS Studio Configuration Guide
 
 This guide covers optimal OBS Studio configurations for streaming your PC desktop or gameplay to a living room Smart TV with **OBS HomeRun**.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 1. [Stream Destination Settings](#1-stream-destination-settings)
 2. [Encoder Tuning by Hardware](#2-encoder-tuning-by-hardware)
    - [NVIDIA NVENC (GeForce RTX / GTX)](#nvidia-nvenc-recommended)

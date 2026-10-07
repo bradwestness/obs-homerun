@@ -1,10 +1,10 @@
-# 🌐 Network Setup & Troubleshooting Guide
+# Network Setup & Troubleshooting Guide
 
 This guide covers network configuration, firewall settings, and solutions to common issues when running **OBS HomeRun**.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 1. [Network Requirements & Multicast (SSDP)](#1-network-requirements--multicast-ssdp)
 2. [Firewall Configuration](#2-firewall-configuration)
    - [Fedora / Red Hat / Bazzite (`firewalld`)](#fedora--red-hat--bazzite-firewalld)

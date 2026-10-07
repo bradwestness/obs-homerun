@@ -9,7 +9,7 @@
 
 ---
 
-## 🎯 The Problem
+## The Problem
 
 Streaming your PC desktop or gaming session to a living room TV over your local network is notoriously frustrating:
 - **No TV Apps Needed:** You shouldn't have to sideload unapproved apps, renew expiring developer mode certificates on your TV OS, or buy an external streaming box.
@@ -17,7 +17,7 @@ Streaming your PC desktop or gaming session to a living room TV over your local 
 - **No Clunky TV Browsers:** Nobody wants to type `http://192.168.1.xxx:port` with a TV remote.
 - **Generic DLNA Servers Fail on Live Feeds:** Media servers like Universal Media Server (UMS), Plex, or Jellyfin are designed for finished movie files on disk. When fed a live OBS feed, they crash with buffer overruns or try to perform byte-range seeks, causing playback to freeze after a few seconds or spin the loading wheel indefinitely.
 
-## 💡 The Solution
+## The Solution
 
 **OBS HomeRun** packages a complete live broadcast bridge into a tiny, single container (~60 MB):
 
@@ -38,13 +38,15 @@ flowchart LR
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 > **Important:** The container **must** use host networking (`--net=host` or `network_mode: host`) so SSDP multicast discovery packets (`239.255.255.250:1900`) can reach your local subnet.
 > - **Linux & NAS:** Native host networking works out-of-the-box.
-> - **Windows & macOS:** Because standard Docker Desktop runs in a virtual machine that isolates multicast by default, see the [🐳 Container Hosting Guide](docs/host-os-setup.md) for Windows 11 WSL2 Mirrored mode and Mac setup.
+> - **Windows & macOS:** Because standard Docker Desktop runs in a virtual machine that isolates multicast by default, see the [Container Setup Guide](docs/host-os-setup.md) for Windows 11 WSL2 Mirrored mode and Mac setup.
 
-### Option A: Podman Quadlet (Recommended for Bazzite / Fedora Silverblue / SteamOS)
+### Option A: Podman Quadlet (Preferred for Bazzite, SteamOS, Fedora)
+
+Podman with Quadlets is the preferred deployment method on Linux (especially atomic/immutable distros like Bazzite, SteamOS, or Fedora Silverblue). It runs rootless under systemd, and with `AutoUpdate=registry`, systemd will automatically check for and pull new container builds when `:latest` updates on ghcr.io.
 
 Save as `~/.config/containers/systemd/obs-homerun.container`:
 
@@ -72,13 +74,27 @@ Reload and start:
 ```bash
 systemctl --user daemon-reload
 systemctl --user start obs-homerun.service
+loginctl enable-linger $USER
 ```
 
 ---
 
-### Option B: Docker Compose / Synology & Network-Attached Storage (NAS)
+### Option B: Docker Desktop (Windows 11 & macOS)
 
-Running OBS HomeRun on an always-on NAS (Synology Container Manager, TrueNAS SCALE, Unraid, QNAP, or any Linux server) is ideal: the broadcaster sits idle 24/7 on your home network without needing any containers or services running on your gaming/workstation PC.
+For Windows and macOS, Docker Desktop is the standard path.
+- **Windows 11:** Requires [WSL2 Mirrored Networking](docs/host-os-setup.md#windows-11-docker-desktop) (`networkingMode=mirrored`) so multicast discovery reaches your physical LAN.
+- **macOS:** Docker Desktop 4.34+ supports host networking out of the box.
+
+Run:
+```bash
+docker run -d --net=host --name obs-homerun --restart=unless-stopped ghcr.io/bradwestness/obs-homerun:latest
+```
+
+---
+
+### Option C: Docker Compose (Linux & NAS)
+
+Running OBS HomeRun on an always-on NAS (Synology Container Manager, TrueNAS SCALE, Unraid, QNAP) or a Linux server lets your TV discover the tuner 24/7 without needing any containers running on your gaming PC.
 
 Save as `docker-compose.yml`:
 
@@ -100,23 +116,9 @@ Run:
 docker compose up -d
 ```
 
-> 💡 **Synology Container Manager:** Create a new project in Container Manager, upload or paste the `docker-compose.yml` above, and ensure the network is set to **host** (`network_mode: host`).
-
 ---
 
-### Option C: CLI One-Liner
-
-```bash
-# Podman
-podman run -d --net=host --name obs-homerun ghcr.io/bradwestness/obs-homerun:latest
-
-# Docker
-docker run -d --net=host --name obs-homerun ghcr.io/bradwestness/obs-homerun:latest
-```
-
----
-
-## 🎥 OBS Studio Configuration
+## OBS Studio Configuration
 
 ### 1. Stream Settings
 In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Stream**:
@@ -138,13 +140,13 @@ In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Output** (Output Mode: 
 > 💡 **Canvas Framing Tip:** If the edges of your desktop appear clipped on your TV, your capture source scale might be zoomed in. In OBS, click your display capture source in the **Sources** dock and press **`Ctrl + R`** (Reset Transform) or **`Ctrl + F`** (Fit to Screen) to snap it cleanly to your canvas.
 
 > 📖 **Comprehensive Guides:**
-> - [🐳 **Container Hosting Guide (Linux, Windows, macOS, & NAS)**](docs/host-os-setup.md): Complete Docker & Podman setup, Windows 11 WSL2 Mirrored mode, and Linux Quadlets.
-> - [🎥 **Dedicated OBS Studio Configuration Guide**](docs/obs-configuration.md): Hardware encoder recipes (NVENC / AMF / QSV / x264), ultrawide aspect ratios, 5.1 surround sound, and profile management.
-> - [🌐 **Network Setup & Troubleshooting Guide**](docs/network-and-troubleshooting.md): Firewall rules, router IGMP/multicast settings, and troubleshooting common streaming issues.
+> - [**Container Setup Guide (Podman & Docker)**](docs/host-os-setup.md): Podman Quadlets with auto-updates, Windows 11 WSL2 Mirrored mode, and NAS setup.
+> - [**OBS Studio Configuration Guide**](docs/obs-configuration.md): Hardware encoder recipes (NVENC, AMF, QSV, x264, VideoToolbox), ultrawide aspect ratios, and surround sound.
+> - [**Network Setup & Troubleshooting Guide**](docs/network-and-troubleshooting.md): Firewall rules, router IGMP/multicast settings, and troubleshooting common streaming issues.
 
 ---
 
-## 📺 Watching on Your Smart TV
+## Watching on Your Smart TV
 
 1. Click **Start Streaming** in OBS Studio.
 2. Turn on your Smart TV:
@@ -157,7 +159,7 @@ In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Output** (Output Mode: 
 
 ---
 
-## ⚙️ Configuration / Environment Variables
+## Configuration & Environment Variables
 
 All settings are optional and have sensible defaults:
 
@@ -174,7 +176,7 @@ All settings are optional and have sensible defaults:
 
 ---
 
-## 🛠️ How It Works Technically
+## How It Works Technically
 
 Traditional media servers fail when streaming live desktop video to Smart TVs because:
 - **VOD vs Live:** TVs expect live streams to omit `Content-Length` and declare UPnP class `object.item.videoItem.videoBroadcast` with `DLNA.ORG_OP=00` (no seeks).
@@ -185,7 +187,7 @@ OBS HomeRun bridges MediaMTX and FFmpeg bitstream filters to solve all three iss
 
 ---
 
-## 💤 Resource Usage & On-Demand Execution
+## Resource Usage
 
 OBS HomeRun is designed to run 24/7 as a background service without wasting system resources:
 
@@ -204,7 +206,7 @@ OBS HomeRun is designed to run 24/7 as a background service without wasting syst
 
 ---
 
-## 🛑 What OBS HomeRun Is (and What It Isn't)
+## Project Scope
 
 ### What It Is:
 - **A Zero-Configuration Live Broadcast Bridge:** Emulates an over-the-air (OTA) digital HDTV tuner over DLNA/UPnP and SSDP.
@@ -226,6 +228,6 @@ If you are looking for scheduled DVR recordings, multi-hour pause/rewind buffers
 
 ---
 
-## 📄 License
+## License
 
 MIT © [Brad Westness](LICENSE)
