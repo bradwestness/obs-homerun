@@ -17,32 +17,19 @@ LABEL org.opencontainers.image.title="OBS HomeRun"
 LABEL org.opencontainers.image.description="Turn your OBS stream into a virtual HDTV tuner for Smart TVs"
 LABEL org.opencontainers.image.source="https://github.com/bradwestness/obs-homerun"
 
-# Install runtime dependencies (FFmpeg only - NO Python needed!)
-RUN apk add --no-cache \
-    ffmpeg \
-    curl \
-    ca-certificates \
-    tar
+# Install runtime dependencies (FFmpeg and curl for HEALTHCHECK)
+RUN apk add --no-cache ffmpeg curl
 
 WORKDIR /app
 
-# Download MediaMTX binary according to target architecture (amd64 / arm64)
-ARG TARGETARCH
-ARG MEDIAMTX_VERSION=v1.21.1
-RUN case "${TARGETARCH}" in \
-      "arm64") MTX_ARCH="linux_arm64" ;; \
-      "amd64"|*) MTX_ARCH="linux_amd64" ;; \
-    esac && \
-    echo "Downloading MediaMTX ${MEDIAMTX_VERSION} for ${MTX_ARCH}..." && \
-    curl -sSL "https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/mediamtx_${MEDIAMTX_VERSION}_${MTX_ARCH}.tar.gz" \
-      | tar -xz -C /app mediamtx && \
-    chmod +x /app/mediamtx
+# Copy latest MediaMTX binary from official image
+COPY --from=docker.io/bluenviron/mediamtx:latest /mediamtx /app/mediamtx
 
 # Copy compiled Rust binary and configuration
 COPY --from=builder /app/obs-homerun /app/obs-homerun
 COPY mediamtx.yml /app/mediamtx.yml
 
-RUN chmod +x /app/obs-homerun
+RUN chmod +x /app/obs-homerun /app/mediamtx
 
 # 1935: RTMP (OBS stream ingest)
 # 5004: HTTP (virtual HDTV / DLNA stream & metadata)
