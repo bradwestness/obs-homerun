@@ -24,9 +24,9 @@ Whenever changes are made to application code (`src/`, `Cargo.toml`, `Containerf
    ```
 
 ### Why Tagging is Required
-Our GitHub Actions workflow ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) publishes multi-arch container images to GitHub Container Registry (GHCR) using `docker/metadata-action`:
-* **Tagged pushes (`v*.*.*`)**: Automatically build and publish tagged container releases (`:vX.Y.Z`, `:X.Y`, `:X`).
-* **Branch pushes (`main`)**: Only publish `:latest` and `:sha-<commit>`.
+Our GitHub Actions workflow ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) publishes multi-arch container images to GitHub Container Registry (GHCR) and creates GitHub Releases:
+* **Tagged pushes (`v*.*.*`)**: Inspects GHCR and GitHub Releases. If that version does not already exist, it builds and publishes multi-arch container releases (`:vX.Y.Z`, `:X.Y.Z`, `:X.Y`, `:latest`) and creates an official GitHub Release with release notes.
+* **Idempotency & Branch pushes (`main`)**: If the container image or release for that version already exists, publishing is skipped to avoid redundant builds and overwriting releases. Branch pushes run tests and container stream validation without publishing unversioned images.
 Without a Git tag, users and deployments pinning release versions will never receive updates.
 
 ---

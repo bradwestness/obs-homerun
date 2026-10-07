@@ -124,10 +124,102 @@ jobs:
         if: failure()
         run: docker logs homerun-test
 
+  check-version:
+    name: Check Version & Release Status
+    runs-on: ubuntu-latest
+    needs: [test, container-validation]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+      should_publish_image: ${{ steps.check.outputs.should_publish_image }}
+      should_create_release: ${{ steps.check.outputs.should_create_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inspect version and registry status
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --tags origin
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            IS_TAG="true"
+          else
+            VERSION=$(grep -m1 '^version' Cargo.toml | cut -d '"' -f2)
+            TAG="v${VERSION}"
+            IS_TAG="false"
+          fi
+
+          echo "Target tag: $TAG"
+          echo "Target version: $VERSION"
+          echo "Is tag push: $IS_TAG"
+
+          # 1. Check if GitHub release already exists
+          if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "GitHub release $TAG already exists."
+            RELEASE_EXISTS="true"
+          else
+            echo "GitHub release $TAG does not exist."
+            RELEASE_EXISTS="false"
+          fi
+
+          # 2. Check if container image already exists in GHCR
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+
+          if docker manifest inspect "${IMAGE_LOWER}:${VERSION}" > /dev/null 2>&1 || \
+             docker manifest inspect "${IMAGE_LOWER}:v${VERSION}" > /dev/null 2>&1; then
+            echo "Container image for ${VERSION} already exists in ${{ env.REGISTRY }}."
+            IMAGE_EXISTS="true"
+          else
+            echo "Container image for ${VERSION} does not exist in ${{ env.REGISTRY }}."
+            IMAGE_EXISTS="false"
+          fi
+
+          # Determine whether to build & publish container image
+          if [ "$IMAGE_EXISTS" = "true" ]; then
+            echo "Image already exists: Skipping container build & push."
+            SHOULD_PUBLISH_IMAGE="false"
+          elif [ "$IS_TAG" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "New version detected on tag or dispatch: Will build and publish container image."
+            SHOULD_PUBLISH_IMAGE="true"
+          else
+            echo "Untagged branch push: Skipping container build & push."
+            SHOULD_PUBLISH_IMAGE="false"
+          fi
+
+          # Determine whether to create GitHub Release
+          if [ "$RELEASE_EXISTS" = "true" ]; then
+            echo "Release already exists: Skipping GitHub Release creation."
+            SHOULD_CREATE_RELEASE="false"
+          elif [ "$IS_TAG" = "true" ]; then
+            echo "New tag detected without existing release: Will create GitHub Release."
+            SHOULD_CREATE_RELEASE="true"
+          else
+            echo "Not a tag push: Skipping GitHub Release creation."
+            SHOULD_CREATE_RELEASE="false"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "should_publish_image=${SHOULD_PUBLISH_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "should_create_release=${SHOULD_CREATE_RELEASE}" >> "$GITHUB_OUTPUT"
+
   build-and-push:
     name: Build & Push Multi-Arch Container
     runs-on: ubuntu-latest
-    needs: [test, container-validation]
+    needs: [test, container-validation, check-version]
+    if: needs.check-version.outputs.should_publish_image == 'true'
     permissions:
       contents: read
       packages: write
@@ -143,7 +235,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -155,10 +246,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+            type=semver,pattern={{version}},value=${{ needs.check-version.outputs.tag }}
+            type=semver,pattern=v{{version}},value=${{ needs.check-version.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.check-version.outputs.tag }}
             type=sha,format=short
 
       - name: Build and push multi-arch Docker image
@@ -167,8 +261,48 @@ jobs:
           context: .
           file: ./Containerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [test, container-validation, check-version, build-and-push]
+    if: |
+      always() &&
+      needs.test.result == 'success' &&
+      needs.container-validation.result == 'success' &&
+      needs.check-version.outputs.should_create_release == 'true' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check-version.outputs.tag }}
+        run: |
+          echo "Publishing GitHub release for tag: ${TAG}"
+          git fetch --tags origin
+          TAG_NOTES=$(git tag -l --format='%(contents)' "$TAG" 2>/dev/null || true)
+          if [ -n "$TAG_NOTES" ]; then
+            gh release create "$TAG" \
+              --title "$TAG - OBS HomeRun" \
+              --notes "$TAG_NOTES" \
+              --generate-notes \
+              --verify-tag
+          else
+            gh release create "$TAG" \
+              --title "$TAG - OBS HomeRun" \
+              --generate-notes \
+              --verify-tag
+          fi
