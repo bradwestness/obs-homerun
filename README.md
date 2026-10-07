@@ -167,6 +167,45 @@ OBS HomeRun bridges MediaMTX and FFmpeg bitstream filters to solve all three iss
 
 ---
 
+## 💤 Resource Usage & On-Demand Execution
+
+OBS HomeRun is designed to run 24/7 as a background service without wasting system resources:
+
+- **Idle (No OBS stream & No TV tuned in):**
+  - Consumes **~20 MB RAM** total (Go engine + MediaMTX).
+  - Uses **0.0% CPU** and **0% GPU** (passively listening for SSDP discovery and incoming connections).
+  - FFmpeg is **not running at all**.
+- **OBS Streaming, TV Not Watching:**
+  - MediaMTX receives your stream into an internal lightweight socket buffer.
+  - FFmpeg is **still not running**—zero transcoding compute is consumed until a TV actively requests the feed.
+- **TV Actively Watching:**
+  - FFmpeg is spawned on-demand as a child process.
+  - Video is remuxed using **stream-copy** (`-c:v copy`), meaning zero GPU encoding power is stolen from your games or local LLMs.
+- **TV Turns Off / Changes Inputs:**
+  - The HTTP connection terminates and FFmpeg is immediately killed (`SIGKILL`), dropping resource usage back to zero.
+
+---
+
+## ⏪ Live Playback & Seeking (Pause / Rewind)
+
+### Why doesn't the TV let me rewind the stream by default?
+In DLNA, streams are flagged with operation capabilities (`DLNA.ORG_OP`). 
+- **`DLNA.ORG_OP=00` (Broadcast / Live):** Signals that the feed is an infinite live broadcast without a predefined file length. The TV enters "LIVE" mode.
+- **`DLNA.ORG_OP=01` or `10` (Seekable):** Requires a fixed `Content-Length` and static file duration. If advertised on a live feed, the TV attempts to seek to the end or perform byte-range requests, resulting in infinite loading spinners or playback stalls.
+
+Physical hardware tuners work the exact same way—they broadcast a live-only stream with zero internal storage. Any pause/rewind functionality is handled on the **client side**.
+
+### How to enable Pause & Rewind on your TV:
+1. **LG Smart TV (Live Playback / Time Machine):**
+   - Connect an external USB Hard Drive (or high-speed USB 3.0 SSD) to your LG TV's USB port.
+   - When tuned into **OBS HomeRun**, enable **Live Playback** in webOS settings.
+   - The TV will maintain a rolling 2-hour buffer locally on the USB drive, allowing you to pause, rewind, and catch back up to live!
+2. **Third-Party Tuner Apps (Apple TV, Shield TV, iPad, PC):**
+   - Apps like **Channels**, **Plex Live TV**, or **Kodi** can tune directly to `http://<PC-IP>:5004/auto/v1.1`.
+   - These apps automatically record a rolling timeshift buffer in client device memory/disk.
+
+---
+
 ## 📄 License
 
 MIT © [Brad Westness](LICENSE)
