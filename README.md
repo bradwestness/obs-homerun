@@ -13,6 +13,7 @@
 
 Streaming your PC desktop or gaming session to a living room TV over your local network is notoriously frustrating:
 - **No TV Apps Needed:** You shouldn't have to sideload unapproved apps, renew expiring developer mode certificates on your TV OS, or buy an external streaming box.
+- **Why Not Miracast / Screen Mirroring?** Miracast and Windows Wireless Display rely on peer-to-peer Wi-Fi Direct between devices in close physical proximity. If your desktop PC is hardwired to gigabit Ethernet in an office and your TV is hardwired in the living room across the house, Miracast fails to connect. Even when it does negotiate, it suffers from aggressive compression, blurry text, dropped frames, and random RF disconnects. And nobody wants to babysit an open laptop on the coffee table fighting battery drain and sleep timeouts when they have a powerful desktop on their LAN.
 - **No Clunky TV Browsers:** Nobody wants to type `http://192.168.1.xxx:port` with a TV remote.
 - **Generic DLNA Servers Fail on Live Feeds:** Media servers like Universal Media Server (UMS), Plex, or Jellyfin are designed for finished movie files on disk. When fed a live OBS feed, they crash with buffer overruns or try to perform byte-range seeks, causing playback to freeze after a few seconds or spin the loading wheel indefinitely.
 
