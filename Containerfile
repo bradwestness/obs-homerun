@@ -19,7 +19,7 @@ WORKDIR /app
 ARG TARGETARCH
 ARG MEDIAMTX_VERSION=v1.21.1
 RUN case "${TARGETARCH}" in \
-      "arm64") MTX_ARCH="linux_arm64v8" ;; \
+      "arm64") MTX_ARCH="linux_arm64" ;; \
       "amd64"|*) MTX_ARCH="linux_amd64" ;; \
     esac && \
     echo "Downloading MediaMTX ${MEDIAMTX_VERSION} for ${MTX_ARCH}..." && \
