@@ -136,7 +136,7 @@ Smart TV discovery issues are almost always caused by home router multicast supp
   1. **OBS Transform Reset:**  
      In OBS, click your screen capture source in the preview window and press **`Ctrl + R`** (Reset Transform), followed by **`Ctrl + F`** (Fit to Screen).
   2. **TV Aspect Ratio Setting:**  
-     On your TV, open Picture / Display settings and set **Aspect Ratio** to **`Original`** or **`Just Scan`** (LG: *Just Scan = On*). Disable *16:9 Overscan* or *Zoom*.
+     On your TV, open Picture / Display settings and set **Aspect Ratio** to **`Original`**, **`Just Scan`**, **`Fit to Screen`**, or **`1:1 Pixel Mapping`** (depending on TV brand). Disable *16:9 Overscan* or *Zoom*.
 
 ---
 

@@ -27,10 +27,12 @@ In OBS Studio, open **Settings** $\rightarrow$ **Stream**:
 | Setting | Value | Notes |
 | :--- | :--- | :--- |
 | **Service** | `Custom...` | Do not select Twitch/YouTube |
-| **Server** | `rtmp://localhost:1935/live` | If OBS runs on the same PC as `obs-homerun` |
+| **Server** | `rtmp://localhost:1935/live` *(Local)*<br/>`rtmp://<NAS-IP>:1935/live` *(NAS / Server)* | Use localhost if running locally, or your NAS/server IP (e.g. `192.168.1.50`) |
 | **Stream Key** | `stream` | Connects to `rtsp://127.0.0.1:8554/live/stream` |
 
-> 💡 **Flatpak OBS (Linux) Note:** If you are running OBS as a Flatpak, `localhost` may resolve to the Flatpak sandbox. If connection fails, set **Server** to your machine's LAN IP (e.g. `rtmp://192.168.1.150:1935/live`) or `rtmp://host.containers.internal:1935/live`.
+> 💡 **NAS & Server Deployments:** If `obs-homerun` is running on a Synology NAS, TrueNAS, Unraid, or server, enter your NAS LAN IP in the **Server** field (e.g. `rtmp://192.168.1.50:1935/live`). Your PC does not need any local services running.
+>
+> 💡 **Flatpak OBS (Linux) Note:** If you are running OBS as a Flatpak locally on the same host, `localhost` may resolve to the Flatpak sandbox. If connection fails, set **Server** to your machine's LAN IP (e.g. `rtmp://192.168.1.150:1935/live`) or `rtmp://host.containers.internal:1935/live`.
 
 ---
 

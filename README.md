@@ -5,14 +5,14 @@
 [![Multi-Arch](https://img.shields.io/badge/Platforms-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey)](#)
 
 > **Turn your OBS Studio stream into a virtual HDTV tuner for Smart TVs.**  
-> Zero TV apps to install. No typing IP addresses in a TV web browser. Works natively on LG webOS, Samsung Tizen, Sony Bravia, and Roku.
+> Zero TV apps to install. No typing IP addresses in a TV web browser. Works natively across modern Smart TVs (Samsung Tizen, LG webOS, Sony Bravia / Google TV, Roku, etc.).
 
 ---
 
 ## 🎯 The Problem
 
 Streaming your PC desktop or gaming session to a living room TV over your local network is notoriously frustrating:
-- **No TV Apps Needed:** You shouldn't have to sideload apps, renew developer mode certificates every 50 days (LG webOS), or buy an external Apple TV / Chromecast.
+- **No TV Apps Needed:** You shouldn't have to sideload unapproved apps, renew expiring developer mode certificates on your TV OS, or buy an external streaming box.
 - **No Clunky TV Browsers:** Nobody wants to type `http://192.168.1.xxx:port` with a TV remote.
 - **Generic DLNA Servers Fail on Live Feeds:** Media servers like Universal Media Server (UMS), Plex, or Jellyfin are designed for finished movie files on disk. When fed a live OBS feed, they crash with buffer overruns or try to perform byte-range seeks, causing playback to freeze after a few seconds or spin the loading wheel indefinitely.
 
@@ -24,7 +24,7 @@ Streaming your PC desktop or gaming session to a living room TV over your local 
 flowchart LR
     OBS["🖥️ OBS Studio<br/>(RTMP Stream)"] -->|:1935| MTX["MediaMTX<br/>(Ingest Engine)"]
     MTX -->|RTSP :8554| BROADCASTER["OBS HomeRun Broadcaster<br/>(SSDP + DLNA + ATSC Remuxer)"]
-    BROADCASTER -->|SSDP Multicast :1900| TV["📺 Smart TV<br/>(LG / Samsung / Sony / Roku)"]
+    BROADCASTER -->|SSDP Multicast :1900| TV["📺 Smart TV<br/>(DLNA / UPnP Tuner)"]
     TV -->|HTTP GET :5004<br/>MPEG-TS Live Broadcast| BROADCASTER
 ```
 
@@ -73,7 +73,11 @@ systemctl --user start obs-homerun.service
 
 ---
 
-### Option B: Docker Compose
+### Option B: Docker Compose / Synology & Network-Attached Storage (NAS)
+
+Running OBS HomeRun on an always-on NAS (Synology Container Manager, TrueNAS SCALE, Unraid, QNAP, or any Linux server) is ideal: the broadcaster sits idle 24/7 on your home network without needing any containers or services running on your gaming/workstation PC.
+
+Save as `docker-compose.yml`:
 
 ```yaml
 services:
@@ -92,6 +96,8 @@ Run:
 ```bash
 docker compose up -d
 ```
+
+> 💡 **Synology Container Manager:** Create a new project in Container Manager, upload or paste the `docker-compose.yml` above, and ensure the network is set to **host** (`network_mode: host`).
 
 ---
 
@@ -112,7 +118,9 @@ docker run -d --net=host --name obs-homerun ghcr.io/bradwestness/obs-homerun:lat
 ### 1. Stream Settings
 In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Stream**:
 - **Service:** Custom...
-- **Server:** `rtmp://localhost:1935/live`
+- **Server:**
+  - If running on the **same PC**: `rtmp://localhost:1935/live`
+  - If running on a **NAS or home server**: `rtmp://<NAS-IP>:1935/live` (e.g. `rtmp://192.168.1.50:1935/live`)
 - **Stream Key:** `stream`
 
 ### 2. Output Settings (NVENC / QuickSync / AMF / x264)
@@ -136,9 +144,11 @@ In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Output** (Output Mode: 
 
 1. Click **Start Streaming** in OBS Studio.
 2. Turn on your Smart TV:
-   - **LG webOS:** Press **Source / Inputs** or open **Home Dashboard** $\rightarrow$ Select **OBS HomeRun** under Storage/Media Devices $\rightarrow$ Click Channel **1.1**.
-   - **Samsung Tizen:** Go to **Connected Devices / Sources** $\rightarrow$ Select **OBS HomeRun**.
-   - **Sony Bravia / Android TV / Roku:** Open the native **Media Player** app $\rightarrow$ Select **OBS HomeRun** under DLNA Servers.
+   - **Samsung Tizen:** Open **Connected Devices / Sources** $\rightarrow$ Select **OBS HomeRun** $\rightarrow$ Select Channel **1.1**.
+   - **LG webOS:** Press **Source / Inputs** or open **Home Dashboard** $\rightarrow$ Select **OBS HomeRun** under Storage/Media Devices $\rightarrow$ Select Channel **1.1**.
+   - **Sony Bravia / Android TV / Google TV:** Open the built-in **Media Player** app $\rightarrow$ Select **OBS HomeRun** under Servers $\rightarrow$ Select Channel **1.1**.
+   - **Roku TV:** Open **Roku Media Player** $\rightarrow$ Select **Video** $\rightarrow$ Select **OBS HomeRun** $\rightarrow$ Select Channel **1.1**.
+   - **Other DLNA Smart TVs / Media Streamers:** Open your TV's native media browser or input list $\rightarrow$ Select **OBS HomeRun**.
 3. The stream will lock on within 1–2 seconds with crystal-clear video and audio!
 
 ---
@@ -176,7 +186,7 @@ OBS HomeRun bridges MediaMTX and FFmpeg bitstream filters to solve all three iss
 OBS HomeRun is designed to run 24/7 as a background service without wasting system resources:
 
 - **Idle (No OBS stream & No TV tuned in):**
-  - Consumes **~20 MB RAM** total (Go engine + MediaMTX).
+  - Consumes **~14 MB RAM** total (Rust engine + MediaMTX).
   - Uses **0.0% CPU** and **0% GPU** (passively listening for SSDP discovery and incoming connections).
   - FFmpeg is **not running at all**.
 - **OBS Streaming, TV Not Watching:**
@@ -190,23 +200,25 @@ OBS HomeRun is designed to run 24/7 as a background service without wasting syst
 
 ---
 
-## ⏪ Live Playback & Seeking (Pause / Rewind)
+## 🛑 What OBS HomeRun Is (and What It Isn't)
 
-### Why doesn't the TV let me rewind the stream by default?
-In DLNA, streams are flagged with operation capabilities (`DLNA.ORG_OP`). 
-- **`DLNA.ORG_OP=00` (Broadcast / Live):** Signals that the feed is an infinite live broadcast without a predefined file length. The TV enters "LIVE" mode.
-- **`DLNA.ORG_OP=01` or `10` (Seekable):** Requires a fixed `Content-Length` and static file duration. If advertised on a live feed, the TV attempts to seek to the end or perform byte-range requests, resulting in infinite loading spinners or playback stalls.
+### What It Is:
+- **A Zero-Configuration Live Broadcast Bridge:** Emulates an over-the-air (OTA) digital HDTV tuner over DLNA/UPnP and SSDP.
+- **Instant Display Mirroring:** Designed to let you sit on your couch, turn on your Smart TV, and watch your PC or game stream immediately with zero TV apps or sideloading required.
+- **Ultra-Lightweight (~14 MB Idle RAM):** Written in Rust with Tokio and MediaMTX to sit idle in the background 24/7 without consuming CPU, GPU, or memory.
 
-Physical hardware tuners work the exact same way—they broadcast a live-only stream with zero internal storage. Any pause/rewind functionality is handled on the **client side**.
+### What It Is Not:
+- **Not a Full DVR or Media Center:** OBS HomeRun has **no server-side recording, disk buffering, or persistent media library**.
+- **No Server-Side Rewind / Time-Shifting:** Just like a physical television antenna tuner, OBS HomeRun outputs a live infinite broadcast stream (`DLNA.ORG_OP=00`). In DLNA, advertising seekability (`DLNA.ORG_OP=01`) on a live stream requires fixed file lengths and byte-range requests; doing so causes TVs to freeze or display endless loading spinners.
 
-### How to enable Pause & Rewind on your TV:
-1. **LG Smart TV (Live Playback / Time Machine):**
-   - Connect an external USB Hard Drive (or high-speed USB 3.0 SSD) to your LG TV's USB port.
-   - When tuned into **OBS HomeRun**, enable **Live Playback** in webOS settings.
-   - The TV will maintain a rolling 2-hour buffer locally on the USB drive, allowing you to pause, rewind, and catch back up to live!
-2. **Third-Party Tuner Apps (Apple TV, Shield TV, iPad, PC):**
-   - Apps like **Channels**, **Plex Live TV**, or **Kodi** can tune directly to `http://<PC-IP>:5004/auto/v1.1`.
-   - These apps automatically record a rolling timeshift buffer in client device memory/disk.
+### Need Full DVR, Scheduled Recording, or Multi-Room Time-Shifting?
+If you are looking for scheduled DVR recordings, multi-hour pause/rewind buffers, or electronic program guides (EPG), you can connect heavier full-DVR suites to OBS HomeRun's HTTP tuner stream (`http://<HOST-IP>:5004/auto/v1.1`):
+- [Channels DVR](https://getchannels.com/) — Premier whole-home live TV & DVR suite with custom M3U/HDHomeRun tuner support, guide data, commercial skipping, and multi-room time-shifting.
+- [Plex Live TV & DVR](https://www.plex.tv/tv/) — Integrates virtual tuner feeds into your Plex media server for scheduled DVR passes and remote streaming.
+- [Kodi](https://kodi.tv/) — Open-source home theater software with PVR plugins (such as IPTV Simple Client or Tvheadend) for client-side timeshifting and recording.
+- [Jellyfin](https://jellyfin.org/) — Free, open-source media system featuring built-in Live TV and DVR recording functionality.
+
+*(Note: If your Smart TV supports local USB recording/time-shifting—such as plugging a USB drive into the TV for native live pause—your TV's built-in tuner software may handle client-side pausing directly).*
 
 ---
 
