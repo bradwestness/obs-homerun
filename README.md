@@ -57,7 +57,7 @@ ContainerName=obs-homerun
 Network=host
 Pull=newer
 AutoUpdate=registry
-Environment="FRIENDLY_NAME=PC Desktop Livestream"
+Environment="FRIENDLY_NAME=OBS HomeRun"
 Environment=CHANNEL_NUMBER=1.1
 Environment=BUFFER_SECONDS=3.0
 
@@ -83,7 +83,7 @@ services:
     network_mode: host
     restart: unless-stopped
     environment:
-      - FRIENDLY_NAME=PC Desktop Livestream
+      - FRIENDLY_NAME=OBS HomeRun
       - CHANNEL_NUMBER=1.1
       - BUFFER_SECONDS=3.0
 ```
