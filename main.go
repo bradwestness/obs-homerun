@@ -380,6 +380,7 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", ffmpegArgs...)
+	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("[Stream] Failed to open FFmpeg stdout pipe: %v", err)
@@ -393,11 +394,27 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write 200 OK header before streaming body
-	w.WriteHeader(http.StatusOK)
-
 	buf := make([]byte, 65536)
+	// Read initial chunk to ensure stream is valid before writing HTTP 200
+	n, readErr := stdout.Read(buf)
+	if n == 0 && readErr != nil {
+		log.Printf("[Stream] FFmpeg stream unavailable: %v", readErr)
+		http.Error(w, "Stream unavailable", http.StatusBadGateway)
+		cancel()
+		_ = cmd.Wait()
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(buf[:n]); err != nil {
+		log.Printf("[Stream] Error writing initial buffer: %v", err)
+		cancel()
+		_ = cmd.Wait()
+		return
+	}
+
 	bytesSent, copyErr := io.CopyBuffer(w, stdout, buf)
+	bytesSent += int64(n)
 
 	// Clean up child process
 	cancel()
