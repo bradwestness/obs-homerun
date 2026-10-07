@@ -78,7 +78,7 @@ New-NetFirewallRule -DisplayName "OBS HomeRun RTMP Ingest" -Direction Inbound -P
 1. **macOS Application Firewall:** Open **System Settings** $\rightarrow$ **Network** $\rightarrow$ **Firewall** $\rightarrow$ **Options...** and ensure `obs-homerun` and `mediamtx` are permitted to accept incoming connections.
 2. **Local Network Permission (macOS 15 Sequoia / Sonoma):** When prompted with *“obs-homerun would like to find devices on local networks”*, select **Allow**.
 
-> 💡 **Detailed Host OS Instructions:** For full instructions on running native services, systemd, or Windows Task Scheduler, see the [💻 Host OS Setup Guide](host-os-setup.md).
+> 💡 **Detailed Container Hosting Instructions:** For step-by-step guides using Docker, Podman, and NAS platforms across all OSs, see the [🐳 Container Hosting Guide](host-os-setup.md).
 
 ---
 

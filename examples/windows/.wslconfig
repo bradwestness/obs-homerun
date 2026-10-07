@@ -1,0 +1,7 @@
+# OBS HomeRun - WSL2 Mirrored Networking Configuration
+# Place this file at: %USERPROFILE%\.wslconfig (e.g. C:\Users\<YourUsername>\.wslconfig)
+# Required on Windows 11 (22H2+) for Docker Desktop to support SSDP UPnP multicast (239.255.255.250:1900)
+
+[wsl2]
+networkingMode=mirrored
+firewall=true
