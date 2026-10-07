@@ -49,4 +49,7 @@ RUN chmod +x /app/obs-homerun
 # 1900: UDP (SSDP UPnP multicast discovery)
 EXPOSE 1935/tcp 5004/tcp 1900/udp
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://127.0.0.1:5004/discover.json || exit 1
+
 ENTRYPOINT ["/app/obs-homerun"]

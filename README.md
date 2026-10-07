@@ -126,6 +126,10 @@ In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Output** (Output Mode: 
 
 > 💡 **Canvas Framing Tip:** If the edges of your desktop appear clipped on your TV, your capture source scale might be zoomed in. In OBS, click your display capture source in the **Sources** dock and press **`Ctrl + R`** (Reset Transform) or **`Ctrl + F`** (Fit to Screen) to snap it cleanly to your canvas.
 
+> 📖 **Comprehensive Guides:**
+> - [🎥 **Dedicated OBS Studio Configuration Guide**](docs/obs-configuration.md): Hardware encoder recipes (NVENC / AMF / QSV / x264), ultrawide aspect ratios, 5.1 surround sound, and profile management.
+> - [🌐 **Network Setup & Troubleshooting Guide**](docs/network-and-troubleshooting.md): Firewall rules, router IGMP/multicast settings, and troubleshooting common streaming issues.
+
 ---
 
 ## 📺 Watching on Your Smart TV

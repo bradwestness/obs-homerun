@@ -1,0 +1,55 @@
+name: 🐛 Bug Report
+description: Report an issue or unexpected behavior in OBS HomeRun
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please provide as much detail as possible.
+
+  - type: input
+    id: tv_model
+    attributes:
+      label: TV Brand & Model
+      description: What Smart TV are you using? (e.g. LG OLED C2 webOS 22, Samsung QN90B Tizen, Sony Bravia A80K, Roku TV)
+      placeholder: e.g. LG OLED55C2PUA (webOS 7.3.0)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment_method
+    attributes:
+      label: Deployment Method
+      description: How are you running OBS HomeRun?
+      options:
+        - Podman Quadlet / Systemd Container
+        - Docker Compose
+        - Docker CLI / Podman CLI
+        - Native Go Binary
+    validations:
+      required: true
+
+  - type: input
+    id: host_os_gpu
+    attributes:
+      label: Host OS & GPU
+      description: What OS and GPU is running OBS and OBS HomeRun?
+      placeholder: e.g. Fedora Atomic / Bazzite Linux, NVIDIA RTX 4080 (NVENC)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: A clear and concise description of what the problem is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste any container logs (`podman logs obs-homerun` or `docker logs obs-homerun`) or OBS logs here.
+      render: shell
