@@ -12,9 +12,8 @@ Because Smart TVs discover the stream using UPnP/SSDP multicast (`239.255.255.25
 3. [Windows 11: Docker Desktop](#windows-11-docker-desktop)
 4. [macOS: Docker Desktop](#macos-docker-desktop)
 5. [Dedicated Home Server / NAS (Synology, Unraid, TrueNAS)](#dedicated-home-server--nas-synology-unraid-truenas)
-6. [OBS Studio Configuration](#obs-studio-configuration)
-7. [Tuning in on the TV](#tuning-in-on-the-tv)
-8. [Verifying the Setup](#verifying-the-setup)
+6. [Verifying the Setup](#verifying-the-setup)
+7. [Next Steps: OBS Studio Configuration](#next-steps-obs-studio-configuration)
 
 ---
 
@@ -238,45 +237,6 @@ Running the container on an always-on NAS or home server lets your Smart TV disc
 3. Under **Network Configuration**, check **Host Network**.
 4. Save and deploy.
 
----
-
-## OBS Studio Configuration
-
-Once the container is running:
-
-1. In OBS Studio, open **Settings** $\rightarrow$ **Stream**:
-   - **Service:** Custom...
-   - **Server:**
-     - Local machine (Docker or Podman on same PC): `rtmp://localhost:1935/live`
-     - Flatpak OBS on Linux: `rtmp://<PC-LAN-IP>:1935/live` (Flatpak sandboxes isolate `localhost`)
-     - NAS or home server: `rtmp://<NAS-IP>:1935/live`
-   - **Stream Key:** `stream`
-2. Open **Settings** $\rightarrow$ **Output** (set Output Mode to **Advanced**, then select the **Streaming** tab):
-   - **Video Encoder:**
-     - NVIDIA GPU: `NVIDIA NVENC H.264`
-     - AMD GPU: `AMD HW H.264` (Windows) or `FFmpeg VAAPI` (Linux)
-     - Intel GPU / iGPU: `QuickSync H.264`
-     - Apple Silicon: `Apple VT H264 Hardware Encoder`
-   - **Rate Control:** `CBR`
-   - **Bitrate:** `6000 Kbps` (or 8000–12000 Kbps on 5GHz Wi-Fi / Ethernet)
-   - **Keyframe Interval:** `1 s` (ensures the TV locks on within ~1 second)
-   - **Max B-frames:** `0` (simplifies decoding pipeline for TV hardware decoders)
-3. In **Settings** $\rightarrow$ **Audio**:
-   - Set **Sample Rate** to `48 kHz` (broadcast audio standard).
-4. Click **Start Streaming**.
-
----
-
-## Tuning in on the TV
-
-With OBS streaming:
-- **Samsung Tizen:** Open **Connected Devices / Sources** $\rightarrow$ select **OBS HomeRun** $\rightarrow$ Channel **1.1**.
-- **LG webOS:** Press **Source / Inputs** or open **Home Dashboard** $\rightarrow$ select **OBS HomeRun** under Storage/Media Devices $\rightarrow$ Channel **1.1**.
-- **Sony Bravia / Google TV:** Open the built-in **Media Player** app $\rightarrow$ select **OBS HomeRun** under Servers $\rightarrow$ Channel **1.1**.
-- **Roku TV:** Open **Roku Media Player** $\rightarrow$ select **Video** $\rightarrow$ select **OBS HomeRun** $\rightarrow$ Channel **1.1**.
-
----
-
 ## Verifying the Setup
 
 Check that the container is running and healthy:
@@ -301,6 +261,15 @@ netstat -an -p udp | grep 1900
 # Windows PowerShell
 Get-NetUDPEndpoint -LocalPort 1900
 ```
+
+---
+
+## Next Steps: OBS Studio Configuration
+
+Once the container is running and healthy:
+1. Open the [OBS Studio Configuration Guide](obs-configuration.md) to configure your stream destination (`rtmp://localhost:1935/live` or `<NAS-IP>`), 1s keyframe interval, and GPU hardware encoder (NVENC, AMF, QuickSync, Apple Silicon).
+2. Click **Start Streaming** in OBS.
+3. Switch your Smart TV input to **OBS HomeRun** (Channel 1.1) to watch.
 
 ---
 

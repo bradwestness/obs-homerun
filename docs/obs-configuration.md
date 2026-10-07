@@ -10,6 +10,7 @@ This guide covers optimal OBS Studio configurations for streaming your PC deskto
    - [NVIDIA NVENC (GeForce RTX / GTX)](#nvidia-nvenc-recommended)
    - [AMD AMF / VA-API (Radeon RX)](#amd-amf--va-api)
    - [Intel QuickSync (Arc / Iris Xe / Core iGPU)](#intel-quicksync-qsv)
+   - [Apple Silicon VideoToolbox (macOS)](#apple-silicon-videotoolbox-macos)
    - [Software x264 (CPU Only)](#software-x264-cpu-only)
 3. [Resolution & Aspect Ratio Management](#3-resolution--aspect-ratio-management)
    - [Standard 16:9 Displays](#standard-169-displays)
@@ -17,6 +18,7 @@ This guide covers optimal OBS Studio configurations for streaming your PC deskto
 4. [Audio Configuration & 5.1 Surround Sound](#4-audio-configuration--51-surround-sound)
 5. [Network & Bitrate Recommendations](#5-network--bitrate-recommendations)
 6. [Workflow Tip: Dedicated OBS Streaming Profile](#6-workflow-tip-dedicated-obs-streaming-profile)
+7. [Tuning in on Your Smart TV](#7-tuning-in-on-your-smart-tv)
 
 ---
 
@@ -86,6 +88,18 @@ For Intel Core integrated graphics or Intel Arc discrete GPUs:
 * **Bitrate:** `6000 Kbps` – `10000 Kbps`
 * **Keyframe Interval:** `1 s`
 * **B-frames:** `0`
+* **Profile:** `high`
+
+---
+
+### Apple Silicon VideoToolbox (macOS)
+
+For Apple Silicon (M1/M2/M3/M4) Macs:
+
+* **Video Codec:** `Apple VT H264 Hardware Encoder`
+* **Rate Control:** `CBR`
+* **Bitrate:** `6000 Kbps` – `10000 Kbps`
+* **Keyframe Interval:** `1 s`
 * **Profile:** `high`
 
 ---
@@ -183,3 +197,15 @@ To avoid overwriting your Twitch or YouTube stream settings, create a dedicated 
 3. Apply the settings from this guide.
 
 Now, whenever you want to chill on the couch and stream your PC to the TV, just switch to the **Living Room TV** profile with a single click!
+
+---
+
+## 7. Tuning in on Your Smart TV
+
+Once you click **Start Streaming** in OBS:
+
+* **Samsung Tizen:** Open **Connected Devices / Sources** $\rightarrow$ select **OBS HomeRun** $\rightarrow$ Channel **1.1**.
+* **LG webOS:** Press **Source / Inputs** or open **Home Dashboard** $\rightarrow$ select **OBS HomeRun** under Storage/Media Devices $\rightarrow$ Channel **1.1**.
+* **Sony Bravia / Google TV:** Open the built-in **Media Player** app $\rightarrow$ select **OBS HomeRun** under Servers $\rightarrow$ Channel **1.1**.
+* **Roku TV:** Open **Roku Media Player** $\rightarrow$ select **Video** $\rightarrow$ select **OBS HomeRun** $\rightarrow$ Channel **1.1**.
+* **Other DLNA Devices / VLC:** Connect directly to `http://<HOST-IP>:5004/auto/v1.1`.
