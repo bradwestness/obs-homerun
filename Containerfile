@@ -1,3 +1,15 @@
+# Stage 1: Build the Go binary
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+
+WORKDIR /src
+COPY go.mod ./
+COPY main.go ./
+
+ARG TARGETOS TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
+    go build -ldflags="-s -w" -o /app/obs-homerun .
+
+# Stage 2: Runtime image
 FROM alpine:3.21
 
 LABEL maintainer="Brad Westness"
@@ -5,9 +17,8 @@ LABEL org.opencontainers.image.title="OBS HomeRun"
 LABEL org.opencontainers.image.description="Turn your OBS stream into a virtual HDTV tuner for Smart TVs"
 LABEL org.opencontainers.image.source="https://github.com/bradwestness/obs-homerun"
 
-# Install runtime dependencies (Python 3, FFmpeg)
+# Install runtime dependencies (FFmpeg only - NO Python needed!)
 RUN apk add --no-cache \
-    python3 \
     ffmpeg \
     curl \
     ca-certificates \
@@ -27,16 +38,15 @@ RUN case "${TARGETARCH}" in \
       | tar -xz -C /app mediamtx && \
     chmod +x /app/mediamtx
 
-# Copy application files
+# Copy compiled Go binary and configuration
+COPY --from=builder /app/obs-homerun /app/obs-homerun
 COPY mediamtx.yml /app/mediamtx.yml
-COPY broadcaster.py /app/broadcaster.py
-COPY entrypoint.sh /app/entrypoint.sh
 
-RUN chmod +x /app/entrypoint.sh /app/broadcaster.py
+RUN chmod +x /app/obs-homerun
 
 # 1935: RTMP (OBS stream ingest)
 # 5004: HTTP (virtual HDTV / DLNA stream & metadata)
 # 1900: UDP (SSDP UPnP multicast discovery)
 EXPOSE 1935/tcp 5004/tcp 1900/udp
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/obs-homerun"]

@@ -12,12 +12,13 @@ rtmpEncryption: "no"
 # RTSP relay for internal FFmpeg remuxer
 rtsp: yes
 rtspAddress: 127.0.0.1:8554
-protocols: [tcp]
+rtspTransports: [tcp]
 
 # Disable unused protocols to keep footprint minimal (<15MB RAM)
 hls: no
 webrtc: no
 srt: no
+moq: no
 
 # Allow any stream path (e.g. /live, /live/stream)
 paths:
