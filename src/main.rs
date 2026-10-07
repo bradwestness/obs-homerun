@@ -3,15 +3,87 @@ use obs_homerun::{config::Config, handlers, ssdp, stream};
 use std::sync::Arc;
 use tracing::{info, warn};
 
-fn start_mediamtx() -> Option<tokio::process::Child> {
-    let bin_path = std::env::var("MEDIAMTX_BIN").unwrap_or_else(|_| "/app/mediamtx".to_string());
-    let config_path = std::env::var("MEDIAMTX_CONFIG").unwrap_or_else(|_| "/app/mediamtx.yml".to_string());
+fn find_file_candidates(env_var: &str, relative_names: &[&str], system_paths: &[&str]) -> Option<std::path::PathBuf> {
+    if let Ok(val) = std::env::var(env_var) {
+        let p = std::path::PathBuf::from(val);
+        if p.exists() {
+            return Some(p);
+        }
+    }
 
-    if std::path::Path::new(&bin_path).exists() {
-        info!("[Init] Starting embedded MediaMTX engine ({})...", bin_path);
-        let mut cmd = tokio::process::Command::new(&bin_path);
-        cmd.arg(&config_path)
-            .stdout(std::process::Stdio::inherit())
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            for name in relative_names {
+                let p = dir.join(name);
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+
+    for name in relative_names {
+        let p = std::path::PathBuf::from(name);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+
+    for p_str in system_paths {
+        let p = std::path::PathBuf::from(p_str);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+
+    None
+}
+
+fn start_mediamtx() -> Option<tokio::process::Child> {
+    let exe_names: Vec<&str> = if cfg!(windows) {
+        vec!["mediamtx.exe", "mediamtx"]
+    } else {
+        vec!["mediamtx", "mediamtx.exe"]
+    };
+
+    let bin_path = find_file_candidates(
+        "MEDIAMTX_BIN",
+        &exe_names,
+        &[
+            "/app/mediamtx",
+            "/opt/homebrew/bin/mediamtx",
+            "/usr/local/bin/mediamtx",
+            "/usr/bin/mediamtx",
+        ],
+    );
+
+    let config_path = find_file_candidates(
+        "MEDIAMTX_CONFIG",
+        &["mediamtx.yml"],
+        &[
+            "/app/mediamtx.yml",
+            "/etc/mediamtx.yml",
+            "/usr/local/etc/mediamtx.yml",
+        ],
+    );
+
+    if let Some(bin) = bin_path {
+        let mut cmd = tokio::process::Command::new(&bin);
+        if let Some(cfg) = config_path {
+            info!(
+                "[Init] Starting embedded MediaMTX engine ({}) with config ({})...",
+                bin.display(),
+                cfg.display()
+            );
+            cmd.arg(&cfg);
+        } else {
+            info!(
+                "[Init] Starting embedded MediaMTX engine ({}) with default configuration...",
+                bin.display()
+            );
+        }
+
+        cmd.stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
             .kill_on_drop(true);
 
@@ -21,6 +93,8 @@ fn start_mediamtx() -> Option<tokio::process::Child> {
                 warn!("[Init] Warning: Failed to start MediaMTX: {}", e);
             }
         }
+    } else {
+        info!("[Init] No local MediaMTX binary found. Expecting external MediaMTX service.");
     }
     None
 }

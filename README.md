@@ -41,6 +41,8 @@ flowchart LR
 ## 🚀 Quick Start
 
 > **Important:** The container **must** use host networking (`--net=host` or `network_mode: host`) so SSDP multicast discovery packets (`239.255.255.250:1900`) can reach your local subnet.
+> - **Linux & NAS:** Native host networking works out-of-the-box.
+> - **Windows & macOS:** Because standard Docker Desktop runs in a virtual machine that isolates multicast by default, see the [💻 Host OS Setup Guide](docs/host-os-setup.md) to run natively or use WSL2 mirrored networking.
 
 ### Option A: Podman Quadlet (Recommended for Bazzite / Fedora Silverblue / SteamOS)
 
@@ -136,6 +138,7 @@ In OBS Studio $\rightarrow$ **Settings** $\rightarrow$ **Output** (Output Mode: 
 > 💡 **Canvas Framing Tip:** If the edges of your desktop appear clipped on your TV, your capture source scale might be zoomed in. In OBS, click your display capture source in the **Sources** dock and press **`Ctrl + R`** (Reset Transform) or **`Ctrl + F`** (Fit to Screen) to snap it cleanly to your canvas.
 
 > 📖 **Comprehensive Guides:**
+> - [💻 **Host OS Setup Guide (Linux, Windows, macOS)**](docs/host-os-setup.md): Native services, Windows Defender/PowerShell, macOS Homebrew/launchd, and Linux Quadlets.
 > - [🎥 **Dedicated OBS Studio Configuration Guide**](docs/obs-configuration.md): Hardware encoder recipes (NVENC / AMF / QSV / x264), ultrawide aspect ratios, 5.1 surround sound, and profile management.
 > - [🌐 **Network Setup & Troubleshooting Guide**](docs/network-and-troubleshooting.md): Firewall rules, router IGMP/multicast settings, and troubleshooting common streaming issues.
 

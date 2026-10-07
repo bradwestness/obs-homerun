@@ -9,6 +9,8 @@ This guide covers network configuration, firewall settings, and solutions to com
 2. [Firewall Configuration](#2-firewall-configuration)
    - [Fedora / Red Hat / Bazzite (`firewalld`)](#fedora--red-hat--bazzite-firewalld)
    - [Ubuntu / Debian (`ufw`)](#ubuntu--debian-ufw)
+   - [Windows Defender Firewall (PowerShell)](#windows-defender-firewall-powershell)
+   - [macOS Firewall & Local Network Privacy](#macos-firewall--local-network-privacy)
 3. [Wi-Fi & Router Settings](#3-wi-fi--router-settings)
 4. [Troubleshooting Common Issues](#4-troubleshooting-common-issues)
    - [Issue 1: TV Does Not Discover OBS HomeRun](#issue-1-tv-does-not-discover-obs-homerun)
@@ -61,6 +63,22 @@ sudo ufw allow 5004/tcp comment "OBS HomeRun DLNA"
 sudo ufw allow 1935/tcp comment "OBS HomeRun RTMP"
 sudo ufw reload
 ```
+
+### Windows Defender Firewall (PowerShell)
+
+Run PowerShell as Administrator:
+```powershell
+New-NetFirewallRule -DisplayName "OBS HomeRun SSDP" -Direction Inbound -Protocol UDP -LocalPort 1900 -Action Allow
+New-NetFirewallRule -DisplayName "OBS HomeRun DLNA HTTP" -Direction Inbound -Protocol TCP -LocalPort 5004 -Action Allow
+New-NetFirewallRule -DisplayName "OBS HomeRun RTMP Ingest" -Direction Inbound -Protocol TCP -LocalPort 1935 -Action Allow
+```
+
+### macOS Firewall & Local Network Privacy
+
+1. **macOS Application Firewall:** Open **System Settings** $\rightarrow$ **Network** $\rightarrow$ **Firewall** $\rightarrow$ **Options...** and ensure `obs-homerun` and `mediamtx` are permitted to accept incoming connections.
+2. **Local Network Permission (macOS 15 Sequoia / Sonoma):** When prompted with *“obs-homerun would like to find devices on local networks”*, select **Allow**.
+
+> 💡 **Detailed Host OS Instructions:** For full instructions on running native services, systemd, or Windows Task Scheduler, see the [💻 Host OS Setup Guide](host-os-setup.md).
 
 ---
 

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.bradwestness.obs-homerun</string>
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Change to the path where you saved obs-homerun -->
+        <string>/usr/local/bin/obs-homerun</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/bin</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>FRIENDLY_NAME</key>
+        <string>OBS HomeRun</string>
+        <key>CHANNEL_NUMBER</key>
+        <string>1.1</string>
+        <key>BUFFER_SECONDS</key>
+        <string>3.0</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/obs-homerun.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/obs-homerun.stderr.log</string>
+</dict>
+</plist>
